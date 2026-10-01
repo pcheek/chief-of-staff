@@ -1,0 +1,6 @@
+.DS_Store
+*.log
+__pycache__/
+*.pyc
+# calendar-manager runtime data lives in ~/.claude/calendar-manager, never in this repo
+calendar-manager-home/

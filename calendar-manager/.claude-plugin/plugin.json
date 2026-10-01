@@ -1,0 +1,10 @@
+{
+  "name": "calendar-manager",
+  "version": "0.1.0",
+  "description": "Agents that run Paul's calendar SOP from a Claude scheduled task: conflict scanning, commute and travel blocks, color coding, notes review and 1:1 audits. When unsure they ask in the task's chat, and each answer becomes a rule they follow from then on. A hook blocks deletes, invites (Callie on travel excepted), RSVPs and messages during runs.",
+  "author": {
+    "name": "Paul Cheek",
+    "url": "https://paulcheek.com/contact"
+  },
+  "homepage": "https://github.com/pcheek/chief-of-staff"
+}

@@ -1,0 +1,18 @@
+{
+  "name": "chief-of-staff",
+  "owner": {
+    "name": "Paul Cheek",
+    "url": "https://paulcheek.com/contact"
+  },
+  "metadata": {
+    "description": "Paul Cheek's personal Claude Code plugins: chief-of-staff agents for his own calendar and life admin.",
+    "homepage": "https://github.com/pcheek/chief-of-staff"
+  },
+  "plugins": [
+    {
+      "name": "calendar-manager",
+      "source": "./calendar-manager",
+      "description": "Agents that run Paul's calendar SOP from a Claude scheduled task: conflict scanning, commute and travel blocks, color coding, notes review and 1:1 audits. When unsure they ask in the task's chat, and each answer becomes a rule they follow from then on. A hook blocks deletes, invites (Callie on travel excepted), RSVPs and messages during runs."
+    }
+  ]
+}
