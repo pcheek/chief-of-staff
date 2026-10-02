@@ -95,6 +95,10 @@ API can, but the agents never get a Calendar credential. Instead:
   environment variables, and allow `script.google.com` and `script.googleusercontent.com`
   on the network. `"working_location_relay": false` in the config switches it off.
 
+In Riley's Google Calendar settings, turn **off** "Automatically add Google Meet video
+conferences to events I create". Otherwise every event Riley creates with a guest (Callie's
+travel invites) gets a Meet link that no connector can remove.
+
 Setup is one step: share `paul@cheek.org` with `riley@cheek.org` with **Make changes to
 events** (not "Make changes and manage sharing").
 

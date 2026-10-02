@@ -54,6 +54,13 @@ blocks those anyway.
 - Book, change or cancel a reservation, or email anyone.
 - Edit an event that has guests, beyond its color.
 
+## After creating an event with Callie
+
+Check the `create_event` result. If it has `conferenceData` or a `conferenceUrl` (Riley's
+account auto-adds Google Meet), report it under `proposed_for_paul` as a "for you" item:
+remove the Meet link from that event, and turn off auto-Meet in Riley's settings. You can't
+remove it yourself.
+
 ## Before you start
 
 Read, in order:
