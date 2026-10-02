@@ -138,8 +138,9 @@ it matters when it is.
 Google Calendar's working location always matches the commute blocks (local time):
 - A day with in-person events: Paul is at each venue from the end of the drive in to the
   start of the drive out, and Home before and after. A day with no commute blocks is Home.
-- Set it with `scripts/working_location.py`, never the calendar connectors (their
-  update_event can't change a working location). `list --date` shows the day's entries.
+- Set it with `scripts/working_location.py`, which goes through Riley's working-location
+  relay, never the calendar connectors (their update_event can't change a working
+  location). `list --date` shows the day's entries.
   `set --event-id` relabels an entry, including today's instance of the recurring all-day
   Home. `add --start --end` adds a partial-day entry, which Google shows over the all-day one.
 - Re-check it every time a commute block is created or moved.

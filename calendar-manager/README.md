@@ -77,17 +77,23 @@ With `calendar_id`, `writer_servers` and `agent_identity` in the config (the clo
 Paul's Gmail is still read through his own Gmail connector, because the org Gmail
 connector is Riley's mailbox.
 
-**One exception: working location.** The calendar connectors' `update_event` has no
-`workingLocationProperties` field, so they can't retype or relabel a working-location entry
-(not the recurring all-day Home, not a partial-day one). The Calendar REST API can.
-`scripts/working_location.py` is the only path to it. It writes **as Paul**, through the
-cloud egress proxy's Google Calendar credentials (`CALENDAR_MANAGER_GCAL_TOKEN` on a
-desktop), and it touches nothing but `workingLocation` events that haven't started (today's
-all-day entry counts as current). It sends only the working-location fields and start/end,
-with `sendUpdates=none`, and tags what it creates with
-`extendedProperties.private.calendarManager=agent`. Set `"working_location_rest": false` in
-the config to switch it off. Because the script lives in the guard-protected plugin
-folder, an agent can't edit it.
+**Working location goes through a relay, still as Riley.** The calendar connectors'
+`update_event` has no `workingLocationProperties` field, so they can't retype or relabel a
+working-location entry (not the recurring all-day Home, not a partial-day one). The Calendar
+API can, but the agents never get a Calendar credential. Instead:
+- `relay/working-location-relay.gs` is a Google Apps Script web app deployed **as
+  riley@cheek.org**. It is the only Calendar API surface the agents can reach. It lists, sets
+  and adds `workingLocation` entries on `paul@cheek.org`, and refuses everything else: any
+  other event type, anything that already started or ended, any field but the
+  working-location ones and start/end. It never notifies anyone (`sendUpdates=none`), tags
+  what it creates (`extendedProperties.private.calendarManager=agent`), and logs every call
+  under Executions.
+- `scripts/working_location.py` calls it with `CALENDAR_MANAGER_WL_RELAY_URL` and
+  `CALENDAR_MANAGER_WL_RELAY_KEY` from the environment. The key is not a Google credential:
+  even if an agent read it, all it can do is what the relay allows.
+- Setup is in the comment at the top of the relay file: deploy it as Riley, set the two
+  environment variables, and allow `script.google.com` and `script.googleusercontent.com`
+  on the network. `"working_location_relay": false` in the config switches it off.
 
 Setup is one step: share `paul@cheek.org` with `riley@cheek.org` with **Make changes to
 events** (not "Make changes and manage sharing").
@@ -127,7 +133,7 @@ Paul's other sessions are unaffected.
 | Change time, title, description and location on solo events (created by the agents, or read and confirmed guest-free in the last 30 minutes) | Editing anything else on events with guests |
 | Invite **only** Callie, to `Flight:`, `Train:` or `Bus:` events, `Drive:` events over 60 minutes, and all-day `Travel:` events, all in the travel color | Callie on commutes, drive time, or drives of an hour or less |
 | Gmail drafts | RSVPs and declines, Gmail send, reply and forward, Slack send |
-| | Raw Calendar API calls through Bash or WebFetch (working locations go through `scripts/working_location.py`, which enforces its own limits) |
+| | Raw Calendar API calls through Bash or WebFetch (working locations go through the Riley relay, which allows nothing else) |
 | | Any mention of the guard's state or config paths, keyed off the real resolved paths, not a hardcoded folder name |
 | | Writes to the guard's code, or to the memory repo's `.claude/`, `.gitignore` or `.gitattributes` |
 | | `git add -f`, staging `state/` or a config file, `git push --force` (any form), deleting remote branches |
