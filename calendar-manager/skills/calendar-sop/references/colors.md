@@ -1,7 +1,8 @@
 # Color categories
 
 Google Calendar event colors map to these `colorId` values. The guard reads the travel color
-from `~/.claude/calendar-manager/config.json` (`travel_color_ids`, default `["1"]`). If you
+from its config (`travel_color_ids`, default `["1"]`): the `CALENDAR_MANAGER_CONFIG_JSON`
+environment variable in the cloud, `config.json` on the desktop. If you
 change the travel color here, change it there too.
 
 | Category | Google name | colorId | Use for |

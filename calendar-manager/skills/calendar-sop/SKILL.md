@@ -15,7 +15,8 @@ to help him stop.
 2. `references/timezones.md`, `references/colors.md`, `references/formats.md`,
    `references/one-on-ones.md`.
 3. `references/learned.md`: rules Paul has confirmed, promoted into the plugin.
-4. `~/.claude/calendar-manager/guidance.md`: Paul's newest answers, not yet promoted.
+4. `guidance.md` in the memory folder (`guidance.py where` prints it; in the cloud it's the
+   private `pcheek/calendar-manager-memory` repo): Paul's newest answers, not yet promoted.
 
 Later sources win over earlier ones. The newest answer from Paul wins over everything except
 the guardrails.

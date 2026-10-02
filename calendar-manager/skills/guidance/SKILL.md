@@ -1,16 +1,21 @@
 ---
 name: guidance
-description: "Turns Paul's answers to calendar-manager questions into durable rules the calendar agents follow from then on. Use whenever Paul replies to a calendar-manager run (for example Q7 red, Q9 skip Fridays), corrects something an agent did, or says how he wants his calendar handled going forward, in the scheduled-task session or via /calendar-manager:guidance. Records each answer with guidance.py, resolves the question, then applies the decision now within the guardrails."
+description: "Turns Paul's answers to calendar-manager questions into durable rules the calendar agents follow from then on. Use whenever Paul replies to a calendar-manager run (for example Q7 red, Q9 skip Fridays), corrects something an agent did, or says how he wants his calendar handled going forward, in the scheduled-task session or via /calendar-manager:guidance. Pulls the memory repo, records each answer with guidance.py and pushes it immediately, then applies the decision now within the guardrails."
 ---
 
 # Record Paul's calendar guidance
 
 Every answer Paul gives should only ever need to be given once.
 
+Paul often replies hours after the run, after the cloud container has been recycled and
+other runs have pushed. So pull first, and push each answer the moment it's recorded.
+Never batch answers for the end of the conversation.
+
 `G` = `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py"`
 
 ## Steps
 
+0. `G sync pull`. If it fails, say so, record anyway, and push at step 2b.
 1. Run `G open` to see which questions are pending, and match Paul's reply to their IDs. If
    he answers without an ID, match by topic. If it's still ambiguous, ask him which question
    he means. Never guess.
@@ -27,9 +32,14 @@ Every answer Paul gives should only ever need to be given once.
 
    Then save it:
    `G answer Q7 --answer "<his words>" --rule "<the rule>" --scope <agent name, or all>`
+
+   2b. Push it right away, one answer at a time:
+   `G sync push --message "answer Q7"`. If it fails, tell Paul the answer is saved only in
+   this container, and retry before you finish.
 3. A correction with no question attached ("don't color Callie's stuff"):
-   `G add-rule --rule "..." --scope <agent>`
-4. A correction to an existing rule: `G rules`, then `G supersede G4 --rule "..."`.
+   `G add-rule --rule "..." --scope <agent>`, then `G sync push --message "rule G12"`.
+4. A correction to an existing rule: `G rules`, then `G supersede G4 --rule "..."`, then
+   `G sync push --message "supersede G4"`.
 5. **Apply now.** Do what the answer decided, for the events it concerns, within the
    guardrails. Usually that means dispatching the agent the question came from with the new
    rule.

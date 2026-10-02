@@ -106,8 +106,99 @@ class GuardTest(unittest.TestCase):
         self.assertEqual(self.pre("Write", {"file_path": state, "content": "{}"}), "deny")
         self.assertEqual(self.pre("Write", {"file_path": os.path.join(self.tmp.name,
                                                                       "config.json")}), "deny")
-        self.assertEqual(self.pre("Bash", {"command": "echo {} > ~/.claude/calendar-manager/"
-                                                      "state/created_events.json"}), "deny")
+        self.assertEqual(self.pre("Bash", {"command": "echo {} > %s" % state}), "deny")
+
+    # ---- protected paths (keyed off the real STATE / CONFIG paths) and git
+
+    def bash(self, command, cwd=None):
+        return self.pre("Bash", {"command": command}, cwd=cwd or self.tmp.name)
+
+    def test_state_by_relative_path_from_memory_repo(self):
+        self.guard_session()
+        self.assertEqual(self.bash("echo {} > state/created_events.json"), "deny")
+        self.assertEqual(self.bash("cat ./state/guarded/x"), "deny")
+        self.assertEqual(self.bash("cd state && ls"), "deny")
+
+    def test_literal_old_path_is_not_the_check(self):
+        # The state lives wherever CALENDAR_MANAGER_HOME says, not in a hardcoded folder.
+        self.guard_session()
+        self.assertEqual(self.bash("ls /tmp/some/calendar-manager/state-of-things"), "allow")
+
+    def test_config_outside_repo_is_off_limits(self):
+        cfg_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(cfg_dir.cleanup)
+        cfg = os.path.join(cfg_dir.name, "config.json")
+        self.env["CALENDAR_MANAGER_CONFIG"] = cfg
+        self.guard_session()
+        self.assertEqual(self.pre("Write", {"file_path": cfg, "content": "{}"}), "deny")
+        self.assertEqual(self.bash("cat %s" % cfg), "deny")
+        self.assertEqual(self.bash('echo x > "$CALENDAR_MANAGER_CONFIG"'), "deny")
+        self.assertEqual(self.pre("Write", {"file_path": os.path.join(self.tmp.name,
+                                                                      "notes.md")}), "allow")
+
+    def test_inline_config_env_wins_over_file(self):
+        self.env["CALENDAR_MANAGER_CONFIG_JSON"] = json.dumps({"travel_color_ids": ["5"]})
+        self.guard_session()
+        self.assertEqual(self.callie_create("Flight: BOS to SFO", "2026-10-13T10:45:00-04:00",
+                                            "2026-10-13T12:09:00-07:00", color="5"), "allow")
+        self.assertEqual(self.callie_create("Flight: BOS to SFO", "2026-10-13T10:45:00-04:00",
+                                            "2026-10-13T12:09:00-07:00", color="1"), "deny")
+
+    def test_memory_repo_code_is_write_protected_but_runnable(self):
+        self.guard_session()
+        os.makedirs(os.path.join(self.tmp.name, ".claude"), exist_ok=True)
+        script = os.path.join(self.tmp.name, ".claude", "calendar-manager", "scripts",
+                              "guidance.py")
+        self.assertEqual(self.bash("python3 %s ask --agent a --question 'x > y?'" % script),
+                         "allow")
+        self.assertEqual(self.bash("cp /tmp/x.py %s" % script), "deny")
+        self.assertEqual(self.bash("echo '' > .gitignore"), "deny")
+        self.assertEqual(self.bash("sed -i s/state// .gitignore"), "deny")
+        self.assertEqual(self.bash("python3 -c \"open('.gitignore','w')\""), "deny")
+        self.assertEqual(self.pre("Edit", {"file_path": os.path.join(self.tmp.name,
+                                                                     ".gitignore")}), "deny")
+        self.assertEqual(self.pre("Write", {"file_path": os.path.join(
+            self.tmp.name, ".claude", "settings.json")}), "deny")
+
+    def test_git_staging_rules(self):
+        self.guard_session()
+        self.assertEqual(self.bash("git add guidance.json guidance.md questions.md runs/"),
+                         "allow")
+        self.assertEqual(self.bash("git add -A && git commit -m 'run 2026-10-05 daily'"),
+                         "allow")
+        self.assertEqual(self.bash("git add -f state/created_events.json"), "deny")
+        self.assertEqual(self.bash("git add --force ."), "deny")
+        self.assertEqual(self.bash("git add -Af"), "deny")
+        self.assertEqual(self.bash("git add state"), "deny")
+        self.assertEqual(self.bash("git add config.json"), "deny")
+        self.assertEqual(self.bash("git -C %s add config.json" % self.tmp.name), "deny")
+        self.assertEqual(self.bash("git rm --cached .gitignore"), "deny")
+        self.assertEqual(self.bash("git checkout HEAD~1 -- .claude/settings.json"), "deny")
+
+    def test_never_force_push(self):
+        self.guard_session()
+        self.assertEqual(self.bash("git push origin HEAD:main"), "allow")
+        self.assertEqual(self.bash("git pull --rebase origin main && git push"), "allow")
+        for cmd in ("git push --force", "git push -f origin main",
+                    "git push --force-with-lease origin main", "git push origin +main",
+                    "git push origin :main", "git push --delete origin main"):
+            self.assertEqual(self.bash(cmd), "deny", cmd)
+
+    def test_memory_repo_sessions_are_always_guarded(self):
+        open(os.path.join(self.tmp.name, ".calendar-manager-memory"), "w").close()
+        self.env.pop("CALENDAR_MANAGER_HOME")
+        self.assertEqual(self.pre(CAL + "delete_event", {"eventId": "x"}, cwd=self.tmp.name),
+                         "deny")
+        sub = os.path.join(self.tmp.name, "runs")
+        os.makedirs(sub)
+        self.assertEqual(self.pre(CAL + "delete_event", {"eventId": "x"}, cwd=sub), "deny")
+        self.assertEqual(self.pre(CAL + "delete_event", {"eventId": "x"},
+                                  cwd=tempfile.gettempdir()), "allow")
+
+    def test_vendored_run_prompt_guards_session(self):
+        self.run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "v1",
+                       "prompt": "/calendar-run daily dry-run"})
+        self.assertEqual(self.pre(CAL + "delete_event", {"eventId": "x"}, sid="v1"), "deny")
 
     # ---- create
 

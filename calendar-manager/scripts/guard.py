@@ -18,8 +18,19 @@ What a guarded session may do to Google Calendar:
   * invite exactly one person, Callie, to a qualifying travel event (see callie_ok)
   * every timed start/end carries an explicit UTC offset, and any timeZone agrees with it
 
-Nothing an agent learns can loosen this. The guard reads only config.json, which the
-agents are not allowed to edit.
+What a guarded session may never touch (see protected()):
+  * the guard's state and config, by any mention, in any tool
+  * the guard's own code, the memory repo's .claude/, .gitignore and .gitattributes, by
+    any write (Write/Edit, redirects, cp/mv/rm/sed -i and friends, inline interpreters)
+  * git: no force-add, no staging of state or config, no force-push, no checkout/rm/reset
+    of protected files
+
+A session is guarded when its prompt invokes calendar-manager, when it runs inside the
+memory repo (a .calendar-manager-memory marker), or when the tool call comes from one of
+the plugin's agents.
+
+Nothing an agent learns can loosen this. The guard reads only its config (an env var or a
+file outside anything the agents commit), which the agents are not allowed to touch.
 
 Stdlib only. Exit 0 always; a deny is a JSON permissionDecision on stdout.
 """
@@ -27,19 +38,36 @@ import datetime as dt
 import json
 import os
 import re
+import shlex
 import sys
 import time
 
-HOME = os.path.expanduser(os.environ.get("CALENDAR_MANAGER_HOME", "~/.claude/calendar-manager"))
-STATE = os.path.join(HOME, "state")
-GUARDED_DIR = os.path.join(STATE, "guarded")
-SOLO_DIR = os.path.join(STATE, "solo_seen")
-CREATED = os.path.join(STATE, "created_events.json")
-CONFIG = os.path.join(HOME, "config.json")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import cm_paths  # noqa: E402
+
+SCRIPT_DIR = os.path.realpath(os.path.dirname(os.path.abspath(__file__)))
+PLUGIN_ROOT = os.path.dirname(SCRIPT_DIR)
+
+# Set per hook call by init_paths(), from the event's cwd.
+HOME = STATE = GUARDED_DIR = SOLO_DIR = CREATED = CONFIG = HOME_CONFIG = ""
+
+
+def init_paths(cwd=None):
+    global HOME, STATE, GUARDED_DIR, SOLO_DIR, CREATED, CONFIG, HOME_CONFIG
+    p = cm_paths.paths(cwd)
+    HOME, STATE, CONFIG, HOME_CONFIG = p["home"], p["state"], p["config"], p["home_config"]
+    GUARDED_DIR = os.path.join(STATE, "guarded")
+    SOLO_DIR = os.path.join(STATE, "solo_seen")
+    CREATED = os.path.join(STATE, "created_events.json")
+
+
+init_paths()
 
 SOLO_TTL = 30 * 60
 MARKER_TTL = 14 * 24 * 3600
-RUN_PROMPT = re.compile(r"(^|[\s/])calendar-manager:", re.I)
+RUN_PROMPT = re.compile(
+    r"(^|[\s/])calendar-manager:|(^|\s)/calendar-(run|guidance|promote-guidance|schedule)\b",
+    re.I)
 AGENT_NAMES = {
     "conflict-scanner", "commute-planner", "travel-planner",
     "categorizer", "notes-reviewer", "one-on-one-auditor",
@@ -96,8 +124,7 @@ def save_json(path, data):
 
 
 def config():
-    cfg = dict(DEFAULT_CONFIG)
-    cfg.update(load_json(CONFIG, {}) or {})
+    cfg = cm_paths.load_config(CONFIG, DEFAULT_CONFIG)
     cfg["owner_emails"] = [e.lower() for e in cfg["owner_emails"]]
     cfg["owner_calendars"] = [c.lower() for c in cfg["owner_calendars"]] + ["primary"]
     cfg["callie_email"] = cfg["callie_email"].lower()
@@ -147,6 +174,9 @@ def is_guarded(event):
     agent = str(event.get("agent_type") or event.get("agent_name") or "")
     if agent.lower().startswith("calendar-manager:") or agent in AGENT_NAMES:
         return True
+    for start in (event.get("cwd"), os.environ.get("CLAUDE_PROJECT_DIR")):
+        if cm_paths.find_marker(start):
+            return True
     sid = safe_id(event.get("session_id"))
     return bool(sid) and os.path.exists(os.path.join(GUARDED_DIR, sid))
 
@@ -366,17 +396,191 @@ def check_pre(event, cfg):
         if RAW_CAL_API.search(text):
             deny("no raw Calendar API calls; use the calendar connector so the guard can see "
                  "what changes.")
-        if tool == "Bash" and re.search(r"calendar-manager/(state|config\.json)|guard\.py|"
-                                        r"hooks\.json", text):
-            deny("the guard's state and config are off limits.")
+        if tool == "Bash":
+            check_bash(str(tool_input.get("command") or ""), event.get("cwd") or os.getcwd())
         return
 
     if tool in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
-        path = os.path.abspath(os.path.expanduser(str(
-            tool_input.get("file_path") or tool_input.get("notebook_path") or "")))
-        if path.startswith(STATE + os.sep) or path == CONFIG \
-                or path.endswith(("guard.py", os.path.join("hooks", "hooks.json"))):
-            deny("the guard's state, config and code are off limits.")
+        raw = str(tool_input.get("file_path") or tool_input.get("notebook_path") or "")
+        tier = path_tier(resolve(raw, event.get("cwd") or os.getcwd()))
+        if tier or raw.endswith(("guard.py", os.path.join("hooks", "hooks.json"))):
+            deny("the guard's state, config and code, and the memory repo's .claude/, "
+                 ".gitignore and .gitattributes, are off limits.")
+
+
+# ---------------------------------------------------------------- protected paths
+
+WRITERS = {"cp", "mv", "rm", "tee", "ln", "chmod", "chown", "truncate", "dd", "rsync",
+           "install", "patch", "touch", "mkdir", "rmdir", "unlink", "shred", "sponge"}
+INTERPRETERS = {"python", "python3", "perl", "ruby", "node", "bash", "sh", "zsh"}
+INLINE_FLAGS = {"-c", "-e", "--eval", "--command"}
+SHELL_OPS = {";", "&&", "||", "|", "&", "(", ")", "|&", ";;"}
+REDIRECTS = {">", ">>", ">|", "&>", "&>>", "<>"}
+GIT_STAGE_PATHS = {"add", "stage", "commit", "checkout", "restore", "rm", "mv", "reset",
+                   "apply", "am", "update-index", "stash", "clean"}
+FORCE_PUSH = {"-f", "--force", "--force-with-lease", "--force-if-includes", "--mirror",
+              "--delete", "-d", "--prune"}
+SECRET_ENV = re.compile(r"CALENDAR_MANAGER_(CONFIG|STATE)")
+
+
+def protected():
+    """(hidden, code): hidden paths may not be mentioned at all; code paths may not be
+    written. Both are real, resolved paths."""
+    hidden = {os.path.realpath(STATE), os.path.realpath(CONFIG), os.path.realpath(HOME_CONFIG)}
+    code = {os.path.join(HOME, ".claude"), os.path.join(HOME, ".gitignore"),
+            os.path.join(HOME, ".gitattributes"), os.path.join(HOME, cm_paths.MARKER),
+            SCRIPT_DIR, os.path.join(PLUGIN_ROOT, "hooks")}
+    return hidden, {os.path.realpath(c) for c in code}
+
+
+def resolve(token, cwd):
+    t = os.path.expandvars(os.path.expanduser(token.strip()))
+    if not t:
+        return ""
+    if not os.path.isabs(t):
+        t = os.path.join(cwd, t)
+    return os.path.realpath(t)
+
+
+def inside(path, roots):
+    return any(path == r or path.startswith(r + os.sep) for r in roots)
+
+
+def path_tier(path):
+    if not path:
+        return None
+    hidden, code = protected()
+    if inside(path, hidden):
+        return "hidden"
+    if inside(path, code):
+        return "code"
+    return None
+
+
+def path_forms(path):
+    """Spellings of an absolute path a command might use."""
+    forms = {path}
+    home = os.path.expanduser("~")
+    if path.startswith(home + os.sep):
+        rest = path[len(home):]
+        forms |= {"~" + rest, "$HOME" + rest, "${HOME}" + rest}
+    return forms
+
+
+def lex(command):
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    return list(lexer)
+
+
+def segments(tokens):
+    seg = []
+    for tok in tokens:
+        if tok in SHELL_OPS:
+            if seg:
+                yield seg
+            seg = []
+        else:
+            seg.append(tok)
+    if seg:
+        yield seg
+
+
+def candidates(token):
+    out = [token]
+    if "=" in token:
+        out.append(token.split("=", 1)[1])
+    return [c for c in out if c and not c.startswith("-")] or []
+
+
+def check_bash(command, cwd):
+    hidden, code = protected()
+    # 1. hidden paths: any spelling, anywhere in the command, or the env vars that name them
+    for p in hidden:
+        for form in path_forms(p):
+            if form in command:
+                deny("the guard's state and config are off limits.")
+    if SECRET_ENV.search(command):
+        deny("the guard's config and state are off limits.")
+    try:
+        tokens = lex(command)
+    except ValueError:
+        deny("could not parse this command; split it into simpler commands.")
+    for seg in segments(tokens):
+        argv, targets = [], []
+        i = 0
+        while i < len(seg):
+            tok = seg[i]
+            if tok in REDIRECTS or re.fullmatch(r"\d?>{1,2}\|?", tok):
+                if i + 1 < len(seg):
+                    targets.append(seg[i + 1])
+                i += 2
+                continue
+            argv.append(tok)
+            i += 1
+        tiers = [path_tier(resolve(c, cwd)) for tok in argv for c in candidates(tok)]
+        if "hidden" in tiers:
+            deny("the guard's state and config are off limits.")
+        for t in targets:
+            if path_tier(resolve(t, cwd)):
+                deny("writing to the guard's files or the memory repo's .claude/, .gitignore "
+                     "or .gitattributes is not allowed.")
+        if not argv:
+            continue
+        prog = os.path.basename(argv[0])
+        if prog == "sudo" and len(argv) > 1:
+            argv, prog = argv[1:], os.path.basename(argv[1])
+        if prog in WRITERS or (prog == "sed" and any(a.startswith("-i") or a == "--in-place"
+                                                       for a in argv)):
+            if "code" in tiers:
+                deny("%s on the guard's code or the memory repo's .claude/, .gitignore or "
+                     ".gitattributes is not allowed." % prog)
+        if re.sub(r"[\d.]+$", "", prog) in INTERPRETERS and \
+                any(a in INLINE_FLAGS for a in argv[1:]):
+            inline = " ".join(argv)
+            names = (".gitignore", ".gitattributes", ".claude", "guard.py", "hooks.json")
+            if any(form in inline for p in code for form in path_forms(p)) or \
+                    any(n in inline for n in names):
+                deny("inline code may not touch the guard's code or the memory repo's "
+                     "protected files.")
+        if prog == "git":
+            check_git(argv, cwd)
+
+
+def check_git(argv, cwd):
+    args = argv[1:]
+    while args and args[0].startswith("-"):  # global options: -C dir, -c k=v, --no-pager
+        if args[0] == "-C" and len(args) > 1:
+            cwd = resolve(args[1], cwd)
+            args = args[2:]
+        elif args[0] == "-c" and len(args) > 1:
+            args = args[2:]
+        else:
+            args = args[1:]
+    if not args:
+        return
+    sub, rest = args[0], args[1:]
+    if sub == "push":
+        bad = [a for a in rest if a in FORCE_PUSH or a.startswith("--force")
+               or (not a.startswith("-") and (a.startswith("+") or a.startswith(":")))]
+        if bad:
+            deny("never force-push or delete remote branches (%s). On a rejected push, "
+                 "`git pull --rebase` and push again." % " ".join(bad))
+        return
+    if sub not in GIT_STAGE_PATHS:
+        return
+    if sub in ("add", "stage") and any(a in ("-f", "--force") or
+                                       (a.startswith("-") and not a.startswith("--")
+                                        and "f" in a[1:]) for a in rest):
+        deny("git add --force would stage ignored files such as the guard's state.")
+    for a in rest:
+        if a.startswith("-"):
+            continue
+        low = a.lower()
+        if path_tier(resolve(a, cwd)) or re.search(r"(^|/)state(/|$)|config\.json", low):
+            deny("git %s may not touch the guard's state, config or protected files (%s)."
+                 % (sub, a))
 
 
 # ---------------------------------------------------------------- PostToolUse recording
@@ -477,6 +681,7 @@ def main():
         return
     if not isinstance(event, dict):
         return
+    init_paths(event.get("cwd"))
     name = event.get("hook_event_name") or (sys.argv[1] if len(sys.argv) > 1 else "")
     global PHASE
     PHASE = name

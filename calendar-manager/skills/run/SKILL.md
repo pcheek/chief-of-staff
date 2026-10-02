@@ -1,25 +1,35 @@
 ---
 name: run
-description: "Scheduled-task entry point for calendar-manager. Invoke as /calendar-manager:run daily, /calendar-manager:run weekly, or add dry-run to report without changing anything. Loads Paul's calendar SOP and learned guidance, dispatches the calendar agents (conflict scanner, commute planner, travel planner, categorizer, notes reviewer, and weekly the 1:1 auditor), merges their questions, writes a run report, and ends by asking Paul the open questions in this session. When Paul replies, record his answers with the guidance skill so the agents learn."
+description: "Scheduled-task entry point for calendar-manager. Invoke as /calendar-manager:run daily, /calendar-manager:run weekly, or add dry-run to report without changing the calendar. Pulls the memory repo, loads Paul's calendar SOP and learned guidance, dispatches the calendar agents (conflict scanner, commute planner, travel planner, categorizer, notes reviewer, and weekly the 1:1 auditor), merges their questions, writes a run report, commits and pushes it to the memory repo, and ends by asking Paul the open questions in this session. When Paul replies, record his answers with the guidance skill so the agents learn."
 ---
 
 # calendar-manager run
 
-This is the prompt a Claude scheduled task fires. Invoking it marks the session as guarded:
-the plugin's hook then blocks deletes, invites (Callie on travel aside), RSVPs and outbound
-messages for the rest of the session.
+This is the prompt a cloud routine fires (or a desktop scheduled task, as a fallback).
+Invoking it, or running inside the memory repo, marks the session as guarded: the hook
+then blocks deletes, invites (Callie on travel aside), RSVPs, outbound messages, force
+pushes, and any touch of the guard's state or config for the rest of the session.
+
+**Memory.** Everything the agents learn lives in the memory folder: in the cloud, a clone
+of the private `pcheek/calendar-manager-memory` repo, pushed straight to its `main` branch
+(not a `claude/` branch). `G where` prints the paths. Only `guidance.json`, `guidance.md`,
+`questions.md` and `runs/` are ever committed, and only through `G sync`, which rebases and
+retries when another run pushed first and never force-pushes.
+
+`G` = `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py"`
 
 `$ARGUMENTS`: `daily` (the default) or `weekly`, optionally with `dry-run`.
 
 ## Steps
 
 1. **Set up.**
-   - Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py" init`. It's idempotent, and on
-     the first run it seeds questions about gaps in the SOP.
+   - `G sync pull`. If it fails, carry on with what's on disk and say so in the report.
+   - `G init`. It's idempotent, and on the first run it seeds questions about gaps in the
+     SOP. Read any WARNING it prints about config or `.gitignore` into the report.
    - Get the current time: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/tz.py" now`.
    - If no Google Calendar connector is available, stop and say so.
 2. **Load context.** Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/SKILL.md`, then
-   `~/.claude/calendar-manager/guidance.md` and `questions.md`.
+   `guidance.md` and `questions.md` in the memory folder.
 3. **Build the location timeline** for the window (`references/timezones.md`).
    - List all-day `Travel:` events and flights, trains and buses covering the window.
    - For each date, record Paul's IANA zone: the `Time zone:` line, or
@@ -41,8 +51,8 @@ messages for the rest of the session.
    Agents that write the same events run in this order instead: travel-planner, then
    commute-planner, then categorizer. That way colors are applied last.
 5. **Merge** each agent's final JSON block. Deduplicate actions and proposals.
-6. **Write the report** to `~/.claude/calendar-manager/runs/<YYYY-MM-DD>-<mode>.md`, with
-   these sections:
+6. **Write the report** to `runs/<YYYY-MM-DD>-<mode>-<HHMM>.md` in the memory folder (local
+   time; add `-dry-run` for a dry run), with these sections:
    - Changes made (drive-time moves first, each with "check childcare")
    - Missing invites (placeholder created, or not yet accepted, or cancelled but still on
      the calendar)
@@ -50,8 +60,15 @@ messages for the rest of the session.
    - Proposals for Paul
    - Questions
    - Rules applied
-7. **Tick:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py" tick` (skip this in a dry
-   run).
+7. **Tick and push.**
+   - `G tick` (skip this in a dry run).
+   - `G sync push --message "run <YYYY-MM-DD> <mode>"` (for a dry run,
+     `"run <YYYY-MM-DD> <mode> dry-run"`). It commits only the memory files, rebases onto
+     anything another run pushed meanwhile, and retries.
+   - If it still fails, the commit stays local. Say so in the reply, because a cloud
+     container is thrown away later.
+   - Do this **before** replying. Question IDs can be renumbered when two runs overlap, so
+     read them after the push.
 8. **Reply to Paul.** This message is all he sees. Every time in it goes through
    `tz.py show <iso> --local <his zone that day>`, which gives local time with Boston in
    parentheses when he's away. If he's traveling today, open with one line saying where
@@ -60,7 +77,7 @@ messages for the rest of the session.
    - Childcare flags, if any.
    - Missing invites and offered times not on the calendar, one line each.
    - Proposals, one line each.
-   - **Questions**: run `guidance.py open`. Number them with their IDs (`Q7`), each with its
+   - **Questions**: run `G open`, after the push. Number them with their IDs (`Q7`), each with its
      default in brackets.
 
      Finish with: "Reply in this chat (for example 'Q7: red. Q9: skip Fridays') and I'll
@@ -70,10 +87,14 @@ messages for the rest of the session.
 
 ## When Paul replies in this session
 
-Use the `guidance` skill: record every answer, then act on it now. The session stays
-guarded, so the same guardrails apply.
+Use the `guidance` skill: pull, record each answer, push it right away, then act on it.
+Replies can come hours later, after this container was recycled, so nothing waits for the
+end of the conversation. The session stays guarded, so the same guardrails apply.
 
 ## Never
+
+- Run `git` on the memory folder yourself, `git add -f`, or force-push. `G sync` is the only
+  way memory gets committed.
 
 - Delete events, invite anyone except Callie on qualifying travel, RSVP, or message anyone.
   The hook enforces this. If a call is denied, the answer is a question, not a workaround.

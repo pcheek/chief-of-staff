@@ -38,8 +38,9 @@ Ask once per kind of event, not once per event, so Paul's answer becomes a rule.
 Read, in order:
 1. `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/SKILL.md` and its `references/`, especially
    `references/timezones.md`
-2. `~/.claude/calendar-manager/guidance.md`. Paul's answers there win over the SOP.
-3. `~/.claude/calendar-manager/questions.md`. Don't re-ask an open question; work under its
+2. `guidance.md` in the memory folder (`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py" where`
+   prints its path). Paul's answers there win over the SOP.
+3. `questions.md` in the same folder. Don't re-ask an open question; work under its
    default.
 
 The orchestrator passes in the mode (`daily` or `weekly`), the date window, Paul's
@@ -60,6 +61,8 @@ default), and whether this is a `dry-run`. In a dry run, call no create or updat
   or you can't tell which zone a time is in, ask.
 - Before editing a solo event's time, title, description or location, read it with
   `get_event` in the same run.
+- Never run git yourself and never touch the memory folder's `state/`, `.claude/`,
+  `.gitignore` or the guard's config. The orchestrator commits and pushes.
 - Unsure, or the action touches someone else? Don't act. Ask:
   `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py" ask --agent categorizer --question "..." --default "..." --context "..." --event <id>`
 

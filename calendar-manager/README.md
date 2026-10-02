@@ -6,10 +6,13 @@ remember the answer.
 
 ## How a run works
 
-1. A Claude scheduled task fires `/calendar-manager:run daily` on weekdays and
-   `/calendar-manager:run weekly` on Sundays. `/calendar-manager:schedule` sets both up.
-2. The run loads the SOP (`skills/calendar-sop`), the promoted rules (`learned.md`) and
-   Paul's newest answers (`~/.claude/calendar-manager/guidance.md`). Then it dispatches:
+1. Two **cloud routines** on claude.ai/code fire the run whether or not Paul's Mac is on:
+   weekdays at 7:52am and Sundays at 4:52pm, Boston time. Each starts a fresh session on
+   the private memory repo `pcheek/calendar-manager-memory`. A desktop scheduled task is
+   the fallback. `/calendar-manager:schedule` covers both.
+2. The run pulls the memory repo and loads the SOP (`skills/calendar-sop`), the promoted
+   rules (`learned.md`) and Paul's newest answers (`guidance.md` in the memory repo). Then
+   it dispatches:
 
    | Agent | Job |
    |---|---|
@@ -25,10 +28,39 @@ remember the answer.
 3. The run ends with a short report in the task's chat: what changed, childcare flags,
    proposals, and numbered questions, each with the default the agents use until Paul
    answers.
-4. Paul replies in that chat ("Q7: red. Q9: skip Fridays"). The `guidance` skill saves each
-   answer as a rule, applies it right away, and every later run follows it.
+   Before replying, the run commits its report and any new questions to the memory repo
+   as `run <date> <mode>` and pushes them.
+4. Paul replies in that chat ("Q7: red. Q9: skip Fridays"), often hours later. The
+   `guidance` skill pulls, saves each answer as a rule, and pushes each one immediately.
+   It then applies the rule, and every later run follows it.
 5. Monthly, `/calendar-manager:promote-guidance` opens a PR here that moves rules that have
    held for two or more runs into the plugin, for review.
+
+## Cloud routines and the memory repo
+
+Cloud sessions don't install plugins, so the memory repo carries a generated copy of this
+plugin in its `.claude/`: the skills, the agents, and the guard hook in
+`.claude/settings.json`. `scripts/vendor_to_memory.py` (repo root) produces it. In that
+copy the commands are `/calendar-run`, `/calendar-guidance`, `/calendar-promote-guidance`
+and `/calendar-schedule`. Re-vendor after every plugin release.
+
+| Piece | Where | Committed? |
+|---|---|---|
+| `guidance.json`, `guidance.md`, `questions.md`, `runs/` | memory repo | Yes, only through `guidance.py sync` |
+| `state/` (guard bookkeeping, including `created_events.json`) | memory repo clone | Never (gitignored, and the guard blocks staging it) |
+| Guard config | `CALENDAR_MANAGER_CONFIG_JSON` in the cloud environment, written by the setup script to `CALENDAR_MANAGER_CONFIG` outside the repo | Never |
+
+**Sync rules**
+- A run pulls with `git pull --rebase` at the start, and commits and pushes at the end.
+- On a rejected push, it rebases and retries.
+- `guidance.json` merges through a custom union merge driver, which renumbers question IDs
+  that collide, so overlapping daily and weekly runs both land.
+- Nothing ever force-pushes. The guard denies `git push --force` and its variants.
+
+**One limit to accept.** Each cloud run starts in a fresh container, and `state/` isn't
+committed. So a run can edit an event's time, title or description only when it read that
+event and confirmed it solo in that same run. Agent-created events from earlier runs get
+the same read-first treatment.
 
 ## Time zones
 
@@ -51,9 +83,12 @@ a `timeZone` that contradicts its offsets, is refused. Rules and city-to-zone ma
 
 ## Guardrails (`scripts/guard.py`)
 
-A hook enforces these in every calendar-manager session. That means any session whose prompt
-invokes `/calendar-manager:*`, plus any of this plugin's agents. Paul's other sessions are
-unaffected.
+A hook enforces these in every calendar-manager session. That covers:
+- any session whose prompt invokes `/calendar-manager:*` or `/calendar-run` and friends;
+- any session running inside the memory repo (its `.calendar-manager-memory` marker);
+- any of this plugin's agents.
+
+Paul's other sessions are unaffected.
 
 | Allowed | Blocked |
 |---|---|
@@ -62,28 +97,43 @@ unaffected.
 | Change time, title, description and location on solo events (created by the agents, or read and confirmed guest-free in the last 30 minutes) | Editing anything else on events with guests |
 | Invite **only** Callie, to `Flight:`, `Train:` or `Bus:` events, `Drive:` events over 60 minutes, and all-day `Travel:` events, all in the travel color | Callie on commutes, drive time, or drives of an hour or less |
 | Gmail drafts | RSVPs and declines, Gmail send, reply and forward, Slack send |
-| | Raw Calendar API calls through Bash or WebFetch; edits to the guard's own state, config or code |
+| | Raw Calendar API calls through Bash or WebFetch |
+| | Any mention of the guard's state or config paths, keyed off the real resolved paths, not a hardcoded folder name |
+| | Writes to the guard's code, or to the memory repo's `.claude/`, `.gitignore` or `.gitattributes` |
+| | `git add -f`, staging `state/` or a config file, `git push --force` (any form), deleting remote branches |
 | | Timed events without an explicit UTC offset, a `timeZone` that contradicts the offsets, or abbreviations like EST/GMT |
 
-A denied call is final. The agent logs a question instead. Nothing the agents learn can
-loosen the guard, because the guard is code and reads only `config.json`, which the agents
-can't edit.
+A denied call is final. The agent logs a question instead.
 
-## Files Paul owns (`~/.claude/calendar-manager/`)
+Nothing the agents learn can loosen the guard. The guard is code, and it reads only its
+config:
+- the `CALENDAR_MANAGER_CONFIG_JSON` environment variable, which no commit can change;
+- or the config file, which sits outside the repo and which the agents can't touch.
+
+## Files
+
+`guidance.py where` prints the paths. In the cloud they live in the memory repo clone; on
+the desktop, in `$CALENDAR_MANAGER_HOME` (default `~/.claude/calendar-manager`).
 
 | File | What |
 |---|---|
-| `config.json` | Your email addresses, owner calendars, Callie's address, the travel colorId. Edit it by hand. |
+| config | Your email addresses, owner calendars, Callie's address, the travel colorId. Comes from the cloud environment, or `config.json` on the desktop. Edit it yourself. |
 | `guidance.md` / `guidance.json` | Your rules, generated by `scripts/guidance.py`. |
 | `questions.md` | Open questions. |
 | `runs/` | One report per run. |
-| `state/` | Guard state. Off limits to the agents. |
+| `state/` | Guard state. Off limits to the agents, never committed. |
 
 ## First run
 
+In a cloud session on the memory repo (the desktop equivalent is
+`/calendar-manager:run daily dry-run`):
+
 ```
-/calendar-manager:run daily dry-run
+/calendar-run daily dry-run
 ```
+
+A dry run leaves the calendar alone, but still commits its report and the seeded questions
+to the memory repo.
 
 The first run seeds seven questions where the source SOPs conflict, are out of date, or leave a gap:
 - the notes color (red vs. purple)
