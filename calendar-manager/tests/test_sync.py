@@ -91,6 +91,25 @@ class SyncTest(unittest.TestCase):
         self.assertIn("Daily question?", md)
         self.assertIn("Weekly question?", md)
 
+    def test_session_branch_still_syncs_main(self):
+        # A cloud session checks out its own claude/<name> branch; memory must still
+        # land on main, and that session must still see what other runs pushed to main.
+        sh("git", "checkout", "-q", "-b", "claude/some-session", cwd=self.a)
+        self.g(self.b, "ask", "--agent", "y", "--question", "Pushed by B?")
+        self.g(self.b, "sync", "push", "--message", "b")
+        out = self.g(self.a, "sync", "pull")
+        self.assertIn("origin/main", out)
+        self.g(self.a, "ask", "--agent", "x", "--question", "From the session branch?")
+        out = self.g(self.a, "sync", "push", "--message", "session run")
+        self.assertIn("origin/main", out)
+        data, _, log = self.remote_data()
+        texts = {q["question"] for q in data["questions"]}
+        self.assertIn("From the session branch?", texts)
+        self.assertIn("Pushed by B?", texts)
+        self.assertIn("session run", log)
+        heads = sh("git", "ls-remote", "--heads", self.remote)
+        self.assertNotIn("claude/some-session", heads)
+
     def test_same_question_from_both_runs_merges(self):
         self.g(self.a, "ask", "--agent", "x", "--question", "Shared question?", "--event", "e1")
         self.g(self.b, "ask", "--agent", "x", "--question", "Shared question?", "--event", "e2")

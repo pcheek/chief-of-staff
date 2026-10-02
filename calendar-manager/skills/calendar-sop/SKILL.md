@@ -97,7 +97,6 @@ it matters when it is.
 - Deep work first thing at the office (Sage, 2). This is his best thinking time, so protect it.
   Deep work gets no notifications.
 - Meetings back to back, with no orphan 30-minute gaps between them.
-- A lunch break, long enough to grab a bite.
 - Afternoons open for meetings.
 - Commute home early evening.
 - No more than 2 or 3 1:1s back to back.
@@ -112,6 +111,14 @@ it matters when it is.
   doesn't auto-add Meet links, and keep it that way.
 - In-person meetings: the full street address and a Google Maps link in the location, with
   MIT arrival and navigation notes and a backup Zoom link in the description.
+- **An in-person event with no location:** find the venue in the event's description and
+  attachments, the invite and related Gmail threads, Drive docs, or HubSpot. Use only an
+  address a source gives, never a guess, and name the source in the description.
+  - Paul is the only attendee: add the address and a Google Maps link to its location.
+  - Anyone else is on it: never edit it. Create a solo FYI event with exactly the same title
+    and time, the address as its location, no color, free, no guests, no reminders, and the
+    description `FYI location for the invite of the same name; source: <where found>`.
+  - Virtual events are skipped. No source gives an address: ask Paul.
 - Virtual meetings: Paul's personal Zoom link in the location.
 - In descriptions, include context from the email thread (only if it isn't confidential) and
   the time zone of anyone outside Eastern time.
@@ -125,6 +132,17 @@ it matters when it is.
   8pm it's about 15 minutes.
 - Drive-time blocks are lavender and get a 5-minute notification. Move them when the day
   changes, then flag each move to Paul so he can arrange childcare if needed.
+
+## Working location
+
+Google Calendar's working location always matches the commute blocks (local time):
+- A day with in-person events: Paul is at each venue from the end of the drive in to the
+  start of the drive out, and Home before and after. A day with no commute blocks is Home.
+- Set it with `scripts/working_location.py`, never the calendar connectors (their
+  update_event can't change a working location). `list --date` shows the day's entries.
+  `set --event-id` relabels an entry, including today's instance of the recurring all-day
+  Home. `add --start --end` adds a partial-day entry, which Google shows over the all-day one.
+- Re-check it every time a commute block is created or moved.
 
 ## Travel
 

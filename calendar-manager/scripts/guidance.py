@@ -490,8 +490,10 @@ def with_network_retry(fn):
 
 
 def branch():
-    res = git("symbolic-ref", "--short", "HEAD")
-    return res.stdout.strip() if res.returncode == 0 else "main"
+    """The memory repo's shared branch: $CALENDAR_MANAGER_MEMORY_BRANCH, else main.
+    Never the checked-out branch: a cloud session starts on its own claude/<name> branch,
+    and memory pushed there is invisible to every later run."""
+    return os.environ.get("CALENDAR_MANAGER_MEMORY_BRANCH") or "main"
 
 
 ATTRIBUTES = ("guidance.json merge=calendar-guidance\n"

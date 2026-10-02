@@ -30,9 +30,11 @@ retries when another run pushed first and never force-pushes.
    - **Write identity.** `G where` shows the config. If it names a `calendar_id`
      (paul@cheek.org), every write goes through riley@cheek.org's calendar connector
      (`mcp__org-connector-google_calendar__*`).
-     - Call its `list_calendars` and confirm `paul@cheek.org` is listed. If it isn't, stop
-       and report: "Paul's calendar isn't shared with riley@cheek.org (Make changes to
-       events)."
+     - Confirm Riley can reach Paul's calendar: `list_events` on `calendarId:
+       "paul@cheek.org"` for the next hour. (A shared calendar Riley never subscribed to is
+       missing from `list_calendars` but still works, so don't rely on that list.) If the
+       read fails, stop and report: "Paul's calendar isn't shared with riley@cheek.org
+       (Make changes to events)."
      - Tell every agent: "writes go through riley@cheek.org, calendarId paul@cheek.org".
    - Without a `calendar_id` (desktop), use Paul's Google Calendar connector. If no calendar
      connector is available, stop and say so.
@@ -49,6 +51,17 @@ retries when another run pushed first and never force-pushes.
      next 48 hours" and "today" are measured in that zone.
    - Any city that can't be resolved becomes a question. Treat that day as unknown and skip
      time-of-day rules for it, rather than assuming Boston.
+3b. **Apply Paul's decisions** before dispatching agents, so they see the result. The
+   Calendar Decisions page (its URL is in guidance.md) keeps every proposal Paul has
+   decided. Read its `items` collection with the ArtifactData tool.
+   - `approved`: do it as proposed. `revise`: do what `choice.note` says. Both within the
+     guardrails, through the same tools and agents as any other change (working locations
+     through `scripts/working_location.py`).
+   - Question items (`kind: "question"`): record the answer with `G answer` (the default
+     for `approved`, `choice.note` for `revise`), then `G sync push`.
+   - `choice.makeRule`: also record a standing rule with `G add-rule`.
+   - Then set the item's `status` to `applied`, or `failed` with `applied.result` saying
+     why. Never delete an item or the `log` collection. In a dry run, apply nothing.
 4. **Dispatch agents** with the Agent tool. Give each one the mode, the window (daily: now
    plus 48 hours; weekly: today through the end of the week after next), `dry-run` if set,
    the current date, and the location timeline.
@@ -79,6 +92,12 @@ retries when another run pushed first and never force-pushes.
      container is thrown away later.
    - Do this **before** replying. Question IDs can be renumbered when two runs overlap, so
      read them after the push.
+7b. **Queue new decisions.** Write each new proposal, missing invite, offered time, travel
+   gap, "for you" action and open question to the page's `items` collection (fields:
+   `order`, `runId`, `category`, `kind` calendar|you|question, `agent`, `title`, `when` in
+   Paul's local time, `proposal`, `why`, `confidence` 0-100, `status: "open"`,
+   `choice: null`, `eventIds`). Skip any that is already open there. Record what this run
+   did on its own as `status: "applied"` items, so the page is the full record.
 8. **Reply to Paul.** This message is all he sees. Every time in it goes through
    `tz.py show <iso> --local <his zone that day>`, which gives local time with Boston in
    parentheses when he's away. If he's traveling today, open with one line saying where
@@ -90,8 +109,9 @@ retries when another run pushed first and never force-pushes.
    - **Questions**: run `G open`, after the push. Number them with their IDs (`Q7`), each with its
      default in brackets.
 
-     Finish with: "Reply in this chat (for example 'Q7: red. Q9: skip Fridays') and I'll
-     save it so I do it that way from now on."
+     Finish with the Calendar Decisions link: "Decide these there (Do it / Revise / Ignore),
+     or reply in this chat (for example 'Q7: red. Q9: skip Fridays') and I'll save it so I
+     do it that way from now on."
 
    If there's nothing to report and no open questions, say so in one line.
 
