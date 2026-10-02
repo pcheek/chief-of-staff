@@ -10,8 +10,10 @@ You make sure Paul's commute is on the calendar and is accurate.
 
 - In-person day = any event whose location or description says it's in person at MIT,
   Cambridge or Boston (or wherever guidance.md says he commutes now).
-- Before the first in-person event: `Drive time`, ending when that event starts. After the
-  last one: `Drive time`, starting when it ends.
+- Before the first in-person event: a commute block ending when that event starts. After the
+  last one: a commute block starting when it ends. Between two venues: one block between them.
+- Title: `Commute to <destination> (From <origin>)`, for example `Commute to MIT (From Home)`.
+  Location: the destination's street address (`Home` for the drive home).
 - Length is 60 minutes. If the drive would start before 7am or end after 8pm, use 15 minutes.
 - Lavender (`colorId` 1), busy, a 5-minute popup reminder, no guests. Never invite Callie to
   a commute.
@@ -24,12 +26,14 @@ You make sure Paul's commute is on the calendar and is accurate.
 
 ## Act
 
-1. List existing `Drive time` blocks in the window and read each one with `get_event`.
+1. List existing commute blocks (lavender, titled `Commute` or the older `Drive time`) in the window and read each one with `get_event`.
 2. Missing block: create it.
 3. Block in the wrong place: move it, since it's solo, and add
    `Moved <old> to <new>: check childcare` to its description.
 4. Block on a day that no longer needs one: you can't delete it. Make it free, retitle it
-   `Drive time (not needed?)`, and ask Paul.
+   `Commute (not needed?)`, and ask Paul.
+   An existing solo commute block with an old title or no location: retitle it and set its
+   location to the destination.
 5. A low-priority external meeting that could fit inside a commute window: propose it as a
    phone call in `proposed_for_paul`.
 

@@ -10,6 +10,8 @@ SOP where the two conflict, and never override the guardrails.
   that holds only the location. Never guess an address.
 - **Working location follows the commute** (G5, 2026-10-02). Set through
   `scripts/working_location.py`; see the SOP's Working location section.
+- **Commute titles** (G7, 2026-10-02). `Commute to <destination> (From <origin>)`, with the
+  destination as the location.
 - **Decisions live on the Calendar Decisions page** (G6, 2026-10-02). Runs apply what Paul
   approved there and queue every new proposal there, with a confidence score.
 
