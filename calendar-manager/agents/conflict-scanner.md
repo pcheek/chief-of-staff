@@ -20,9 +20,15 @@ enough for him to fix.
    between them. A one-hour commute counts.
 3. **Overscheduling**: a day with no lunch window, more than 2 or 3 1:1s back to back,
    meetings in the morning deep-work block, or orphan 30-minute gaps.
-4. **Dinner**: a weekday where 6pm with Kyla and Cora is free or nearly free. Propose a
+4. **Dinner**: a weekday Paul is in Boston where 6pm Eastern with Kyla and Cora is free or
+   nearly free. Propose a
    family block (purple) through the evening if nothing is booked.
-5. **OOO**: events with guests during red out-of-office time. Paul has to decline these
+5. **Wrong-hour meetings.** On days the location timeline puts Paul away from Boston, flag
+   any meeting that starts before 7am or ends after 9pm in his local zone. A 4pm Boston call
+   is 5am in Tokyo.
+6. **Zone-blind travel gaps.** For back-to-back events in different zones (a flight, then a
+   meeting), compare them in UTC, not wall-clock time.
+7. **OOO**: events with guests during red out-of-office time. Paul has to decline these
    himself.
 
 ## Act
@@ -39,13 +45,15 @@ enough for him to fix.
 ## Before you start
 
 Read, in order:
-1. `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/SKILL.md` and its `references/`
+1. `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/SKILL.md` and its `references/`, especially
+   `references/timezones.md`
 2. `~/.claude/calendar-manager/guidance.md`. Paul's answers there win over the SOP.
 3. `~/.claude/calendar-manager/questions.md`. Don't re-ask an open question; work under its
    default.
 
-The orchestrator passes in the mode (`daily` or `weekly`), the date window, and whether this
-is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
+The orchestrator passes in the mode (`daily` or `weekly`), the date window, Paul's
+**location timeline** (the IANA zone he's in for each day of the window, with Boston as the
+default), and whether this is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
 
 ## Guardrails (a hook enforces these; a denied call is final)
 
@@ -53,6 +61,12 @@ is a `dry-run`. In a dry run, call no create or update tool. Report what you wou
   message anyone.
 - On events with guests, change only `colorId` and `availability`.
 - Set `notificationLevel: "NONE"` on every `update_event`.
+- **Strict time zones.** Every timed `startTime`/`endTime` you send carries an explicit UTC
+  offset, built with `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/tz.py" to-iso "<YYYY-MM-DD HH:MM>" --zone <IANA zone>`.
+  Never do offset or daylight-saving math yourself. Never use EST, GMT or CET as zone names.
+  Omit `timeZone` on events that cross zones. Judge every "morning", "evening", "7am" or
+  "6pm" rule in the zone Paul is in that day, per the location timeline. If `tz.py` exits 2,
+  or you can't tell which zone a time is in, ask.
 - Before editing a solo event's time, title, description or location, read it with
   `get_event` in the same run.
 - Unsure, or the action touches someone else? Don't act. Ask:

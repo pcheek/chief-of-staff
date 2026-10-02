@@ -16,13 +16,22 @@ messages for the rest of the session.
 1. **Set up.**
    - Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py" init`. It's idempotent, and on
      the first run it seeds questions about gaps in the SOP.
-   - Get today's date and time in America/New_York.
+   - Get the current time: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/tz.py" now`.
    - If no Google Calendar connector is available, stop and say so.
 2. **Load context.** Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/SKILL.md`, then
    `~/.claude/calendar-manager/guidance.md` and `questions.md`.
-3. **Dispatch agents** with the Agent tool. Give each one the mode, the window (daily: now
+3. **Build the location timeline** for the window (`references/timezones.md`).
+   - List all-day `Travel:` events and flights, trains and buses covering the window.
+   - For each date, record Paul's IANA zone: the `Time zone:` line, or
+     `tz.py zone-of "<city>"`. Default to America/New_York.
+   - Note which days have a mid-day zone change (a travel day).
+   - Re-read the current time in today's zone (`tz.py now --zone <zone>`). Windows like "the
+     next 48 hours" and "today" are measured in that zone.
+   - Any city that can't be resolved becomes a question. Treat that day as unknown and skip
+     time-of-day rules for it, rather than assuming Boston.
+4. **Dispatch agents** with the Agent tool. Give each one the mode, the window (daily: now
    plus 48 hours; weekly: today through the end of the week after next), `dry-run` if set,
-   and the current date.
+   the current date, and the location timeline.
    - **First, in parallel:** `invite-reconciler` and `offered-times-tracker`. Both look at
      14 days of Gmail, whatever the mode.
    - **Then, in parallel:** `conflict-scanner`, `commute-planner`, `travel-planner`,
@@ -31,8 +40,8 @@ messages for the rest of the session.
 
    Agents that write the same events run in this order instead: travel-planner, then
    commute-planner, then categorizer. That way colors are applied last.
-4. **Merge** each agent's final JSON block. Deduplicate actions and proposals.
-5. **Write the report** to `~/.claude/calendar-manager/runs/<YYYY-MM-DD>-<mode>.md`, with
+5. **Merge** each agent's final JSON block. Deduplicate actions and proposals.
+6. **Write the report** to `~/.claude/calendar-manager/runs/<YYYY-MM-DD>-<mode>.md`, with
    these sections:
    - Changes made (drive-time moves first, each with "check childcare")
    - Missing invites (placeholder created, or not yet accepted, or cancelled but still on
@@ -41,9 +50,12 @@ messages for the rest of the session.
    - Proposals for Paul
    - Questions
    - Rules applied
-6. **Tick:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py" tick` (skip this in a dry
+7. **Tick:** `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py" tick` (skip this in a dry
    run).
-7. **Reply to Paul.** This message is all he sees. Keep it short, in this order:
+8. **Reply to Paul.** This message is all he sees. Every time in it goes through
+   `tz.py show <iso> --local <his zone that day>`, which gives local time with Boston in
+   parentheses when he's away. If he's traveling today, open with one line saying where
+   he is and the offset from Boston. Keep it short, in this order:
    - One line: what changed, as counts.
    - Childcare flags, if any.
    - Missing invites and offered times not on the calendar, one line each.

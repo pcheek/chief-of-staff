@@ -15,7 +15,7 @@ is personal.
 
 | Plugin | Source | What it does |
 |---|---|---|
-| `calendar-manager` | bundled (`./calendar-manager`) | Eight agents run Paul's calendar SOP from a Claude scheduled task: conflict and overscheduling scans, commute drive-time, fully documented travel, color coding and free/busy, notes review, 1:1 audits, a daily Gmail sweep that flags any invite he hasn't declined that's missing from his calendar, and red busy holds on every time he (or his scheduler) offers by email. When an agent is unsure, it asks in that task's chat, and each answer becomes a rule every later run follows. A hook blocks deletes, invites (except Callie on flights, trains, buses, long drives and all-day travel), RSVPs and outbound messages, so agents can only create solo events and recolor or re-mark free/busy on everything else. |
+| `calendar-manager` | bundled (`./calendar-manager`) | Eight agents run Paul's calendar SOP from a Claude scheduled task: conflict and overscheduling scans, commute drive-time, fully documented travel, color coding and free/busy, notes review, 1:1 audits, a daily Gmail sweep that flags any invite he hasn't declined that's missing from his calendar, and red busy holds on every time he (or his scheduler) offers by email. Strictly time-zone aware: each run works out where Paul is that day (Boston by default), and every event carries an explicit UTC offset. When an agent is unsure, it asks in that task's chat, and each answer becomes a rule every later run follows. A hook blocks deletes, invites (except Callie on flights, trains, buses, long drives and all-day travel), RSVPs and outbound messages, so agents can only create solo events and recolor or re-mark free/busy on everything else. |
 
 ## Before you push
 

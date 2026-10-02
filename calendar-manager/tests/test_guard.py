@@ -242,6 +242,52 @@ class GuardTest(unittest.TestCase):
             "eventId": "h1", "summary": "DONE: HOLD: offered to Jane Doe: podcast",
             "availability": "AVAILABILITY_FREE", "notificationLevel": "NONE"}), "allow")
 
+    # ---- strict time zones
+
+    def test_naive_times_denied(self):
+        self.guard_session()
+        self.assertEqual(self.pre(CAL + "create_event", {
+            "summary": "Deep work", "startTime": "2026-10-05T07:00:00",
+            "endTime": "2026-10-05T09:00:00"}), "deny")
+        self.assertEqual(self.pre(CAL + "create_event", {
+            "summary": "Deep work", "startTime": "2026-10-05T07:00:00-04:00",
+            "endTime": "2026-10-05T09:00:00"}), "deny")
+
+    def test_cross_zone_flight_with_offsets_allowed(self):
+        self.guard_session()
+        self.assertEqual(self.callie_create("Flight: BOS to LHR (BA 212)",
+                                            "2026-10-13T18:30:00-04:00",
+                                            "2026-10-14T06:25:00+01:00"), "allow")
+
+    def test_timezone_field_must_match_offsets(self):
+        self.guard_session()
+        base = {"summary": "Flight: BOS to LHR", "colorId": "1",
+                "startTime": "2026-10-13T18:30:00-04:00", "endTime": "2026-10-14T06:25:00+01:00"}
+        self.assertEqual(self.pre(CAL + "create_event", dict(base, timeZone="America/New_York")),
+                         "deny")
+        self.assertEqual(self.pre(CAL + "create_event", dict(base, timeZone="EST")), "deny")
+        london = {"summary": "Dinner", "timeZone": "Europe/London",
+                  "startTime": "2026-10-27T19:00:00+00:00", "endTime": "2026-10-27T21:00:00+00:00"}
+        self.assertEqual(self.pre(CAL + "create_event", london), "allow")
+        # Oct 20 London is still on BST (+01:00); +00:00 is wrong for that zone and date.
+        self.assertEqual(self.pre(CAL + "create_event", dict(
+            london, startTime="2026-10-20T19:00:00+00:00", endTime="2026-10-20T21:00:00+00:00")),
+            "deny")
+
+    def test_update_time_needs_offset(self):
+        self.guard_session()
+        self.see_event({"id": "d1", "summary": "Drive time",
+                        "start": {"dateTime": "2026-10-02T08:00:00-04:00"}})
+        self.assertEqual(self.pre(CAL + "update_event", {
+            "eventId": "d1", "startTime": "2026-10-02T07:30:00", "notificationLevel": "NONE"}),
+            "deny")
+
+    def test_all_day_dates_allowed(self):
+        self.guard_session()
+        self.assertEqual(self.pre(CAL + "create_event", {
+            "summary": "Travel: Tokyo", "allDay": True, "colorId": "1",
+            "startTime": "2026-11-02", "endTime": "2026-11-06"}), "allow")
+
     # ---- update
 
     def test_color_and_freebusy_on_guest_event_allowed(self):

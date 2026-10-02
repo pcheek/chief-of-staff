@@ -46,14 +46,15 @@ class GuidanceTest(unittest.TestCase):
         self.g("init")
         d = self.data()
         d.pop("seeded_keys")
-        d["questions"] = [q for q in d["questions"] if q["agent"] != "offered-times-tracker"]
+        d["questions"] = d["questions"][:5]
         d["questions"][0]["status"] = "answered"
         with open(os.path.join(self.tmp.name, "guidance.json"), "w") as fh:
             json.dump(d, fh)
         self.g("init")
         qs = self.data()["questions"]
-        self.assertEqual(sum(q["agent"] == "offered-times-tracker" for q in qs), 1)
-        self.assertEqual(sum(q["status"] == "open" for q in qs), 5)
+        # The answered v0.1 question stays answered; every later seed arrives exactly once.
+        self.assertEqual(len(qs), 5 + 2)
+        self.assertEqual(sum(q["status"] == "open" for q in qs), 4 + 2)
 
     def test_duplicate_question_is_merged(self):
         self.g("ask", "--agent", "a", "--question", "Overlap Tue 2pm?")

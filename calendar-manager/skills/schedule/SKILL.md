@@ -12,6 +12,10 @@ description: "Sets up the Claude scheduled tasks that run calendar-manager. A we
 | Calendar daily | `/calendar-manager:run daily` | Weekdays 7:52am, before he leaves home |
 | Calendar weekly | `/calendar-manager:run weekly` | Sundays 4:52pm, a three-week lookahead before the week starts |
 
+Times are Boston time (`CRON_TZ=America/New_York` for Routines), so daylight-saving changes
+are handled. While Paul travels, the daily run still fires at 7:52am Boston, which can be
+the middle of his local day or night. The report always shows his local time. If he wants
+the run to follow him instead, he changes the task's time zone; record that as guidance.
 Off-hour minutes keep the runs out of the top-of-hour rush. Confirm the times with Paul
 before creating anything.
 

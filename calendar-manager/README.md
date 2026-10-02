@@ -30,6 +30,25 @@ remember the answer.
 5. Monthly, `/calendar-manager:promote-guidance` opens a PR here that moves rules that have
    held for two or more runs into the plugin, for review.
 
+## Time zones
+
+Paul lives in Boston and is often elsewhere, so every run builds a **location timeline**
+before it acts: for each day, the IANA zone he's in. It comes from all-day `Travel: <city>`
+events (their `Time zone:` line) and his flights, and defaults to America/New_York.
+
+- Agents never do offset or daylight-saving math themselves. `scripts/tz.py` does it from the
+  IANA database, and refuses DST gaps and double hours.
+- Time-of-day rules (deep work, lunch, no meetings before 7am or after 9pm) apply in his local
+  zone that day.
+- Boston-only rules (commute, 6pm family dinner, Friday WFH, in-person 1:1s) switch off
+  while he's away.
+- Flights carry each end's own offset.
+- Reports show local time with Boston in parentheses.
+
+The guard enforces the core of this: a timed event without an explicit UTC offset, or with
+a `timeZone` that contradicts its offsets, is refused. Rules and city-to-zone mapping:
+`skills/calendar-sop/references/timezones.md`.
+
 ## Guardrails (`scripts/guard.py`)
 
 A hook enforces these in every calendar-manager session. That means any session whose prompt
@@ -44,6 +63,7 @@ unaffected.
 | Invite **only** Callie, to `Flight:`, `Train:` or `Bus:` events, `Drive:` events over 60 minutes, and all-day `Travel:` events, all in the travel color | Callie on commutes, drive time, or drives of an hour or less |
 | Gmail drafts | RSVPs and declines, Gmail send, reply and forward, Slack send |
 | | Raw Calendar API calls through Bash or WebFetch; edits to the guard's own state, config or code |
+| | Timed events without an explicit UTC offset, a `timeZone` that contradicts the offsets, or abbreviations like EST/GMT |
 
 A denied call is final. The agent logs a question instead. Nothing the agents learn can
 loosen the guard, because the guard is code and reads only `config.json`, which the agents
@@ -65,13 +85,14 @@ can't edit.
 /calendar-manager:run daily dry-run
 ```
 
-The first run seeds six questions where the source SOPs conflict, are out of date, or leave a gap:
+The first run seeds seven questions where the source SOPs conflict, are out of date, or leave a gap:
 - the notes color (red vs. purple)
 - the airport transit color
 - the current 1:1 roster (the bundled one is MIT-era 2024)
 - the current commute
 - which calendar identity is yours
 - who schedules on your behalf, so their offers get held too
+- whether you switch Google Calendar's time zone when you travel
 
 Answer them in the chat.
 

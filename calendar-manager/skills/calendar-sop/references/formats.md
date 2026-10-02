@@ -38,7 +38,7 @@ Address: <street address>
 Directions: <Google Maps link>
 Arrival: <MIT building/room, parking, check-in notes>
 Backup Zoom: <Paul's personal Zoom link>
-Time zone: <if anyone is outside ET>
+Time zone: <if anyone is outside Paul's local zone: each person's local time, e.g. 2:00pm GMT / 9:00am ET>
 Context: <non-confidential summary of the email thread>
 ```
 

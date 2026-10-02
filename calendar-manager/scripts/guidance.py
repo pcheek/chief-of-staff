@@ -39,7 +39,7 @@ DEFAULT_CONFIG = {
     "owner_calendars": ["primary"],
     "callie_email": "calliemcheek@gmail.com",
     "travel_color_ids": ["1"],
-    "timezone": "America/New_York",
+    "home_timezone": "America/New_York",
 }
 
 # Gaps and contradictions in the source SOPs. Each run asks until Paul answers.
@@ -66,6 +66,11 @@ SEED_QUESTIONS = [
      "If it differs from config.json owner_emails, edit ~/.claude/calendar-manager/config.json "
      "yourself: the agents are not allowed to.",
      "Both addresses count as you."),
+    ("travel-planner",
+     "When you travel, do you switch Google Calendar's display time zone to where you are, "
+     "or keep it on Boston? (Events are written with exact offsets either way; this only "
+     "changes how the run report and new events are labeled.)",
+     "Keep the calendar on Boston; reports show local time with Boston in parentheses."),
     ("offered-times-tracker",
      "Who schedules on your behalf (EA, team members), so the times they offer by email "
      "count as yours and get held on your calendar?",

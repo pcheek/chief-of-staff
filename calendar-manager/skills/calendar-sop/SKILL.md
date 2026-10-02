@@ -12,7 +12,8 @@ to help him stop.
 ## Read order (every run, every agent)
 
 1. This file.
-2. `references/colors.md`, `references/formats.md`, `references/one-on-ones.md`.
+2. `references/timezones.md`, `references/colors.md`, `references/formats.md`,
+   `references/one-on-ones.md`.
 3. `references/learned.md`: rules Paul has confirmed, promoted into the plugin.
 4. `~/.claude/calendar-manager/guidance.md`: Paul's newest answers, not yet promoted.
 
@@ -55,6 +56,19 @@ To ask, run:
 Make each question answerable in one line, with your recommended default. Don't guess on
 anything with stakes.
 
+## Time zones (strict)
+
+Paul lives in Boston (America/New_York) and is often somewhere else. For every day, know
+which zone he's in. `references/timezones.md` has the location timeline, the rules, and the
+`scripts/tz.py` helper that does all the offset and daylight-saving math.
+
+The short version:
+- Every time written to the calendar carries an explicit UTC offset. The guard rejects
+  anything else.
+- "Morning", "lunch", "7am" and "6pm" mean local time wherever he is.
+- Commute, family dinner, Friday WFH and in-person 1:1s apply only when he's in Boston.
+- Every time shown to Paul is in his local zone, with Boston in parentheses.
+
 ## Paul's priorities, highest first
 
 1. Teaching and speaking. These are hardest to move, because one person can't reschedule
@@ -66,10 +80,10 @@ anything with stakes.
 6. External meetings, unless time-sensitive.
 
 When two events collide, the lower priority is the one that should move, and Paul decides.
-Protect family dinner at 6pm with Kyla and Cora whenever it's possible. It rarely is, so
+When he's in Boston, protect family dinner at 6pm with Kyla and Cora whenever it's possible. It rarely is, so
 it matters when it is.
 
-## Shape of a good day
+## Shape of a good day (in Paul's local zone that day)
 
 - Home time before the morning commute.
 - Deep work first thing at the office (green). This is his best thinking time, so protect it.
@@ -79,7 +93,7 @@ it matters when it is.
 - Afternoons open for meetings.
 - Commute home early evening.
 - No more than 2 or 3 1:1s back to back.
-- Thursday mornings are for European calls.
+- Thursday mornings (Boston time) are for European calls.
 - Friday is the standard work-from-home day. Mark WFH days on the calendar, but don't decline
   meetings because of them.
 

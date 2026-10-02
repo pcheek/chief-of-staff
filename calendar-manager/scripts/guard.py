@@ -16,6 +16,7 @@ What a guarded session may do to Google Calendar:
   * on a solo event it created, or one a read in this session showed to be solo within
     the last 30 minutes: also change time, title, description, location and reminders
   * invite exactly one person, Callie, to a qualifying travel event (see callie_ok)
+  * every timed start/end carries an explicit UTC offset, and any timeZone agrees with it
 
 Nothing an agent learns can loosen this. The guard reads only config.json, which the
 agents are not allowed to edit.
@@ -50,6 +51,7 @@ DEFAULT_CONFIG = {
     "owner_calendars": ["primary"],
     "callie_email": "calliemcheek@gmail.com",
     "travel_color_ids": ["1"],
+    "home_timezone": "America/New_York",
 }
 
 # Calendar MCP actions a guarded session may call. Anything else on a calendar server
@@ -71,6 +73,8 @@ RAW_CAL_API = re.compile(
     re.I,
 )
 TRAVEL_TIMED = ("flight:", "train:", "bus:", "drive:")
+HAS_OFFSET = re.compile(r"T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$")
+DATE_ONLY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 # ---------------------------------------------------------------- helpers
@@ -224,6 +228,42 @@ def callie_ok(ev, cfg):
 
 # ---------------------------------------------------------------- PreToolUse checks
 
+def check_times(tool_input):
+    """Strict time zones: Paul lives in Boston but is often elsewhere, so a time without an
+    explicit offset is a guess. Every timed start/end must carry one, and a timeZone field
+    (which the connector applies over both offsets) must agree with them."""
+    all_day = bool(tool_input.get("allDay"))
+    times = [(k, tool_input.get(k)) for k in ("startTime", "endTime")
+             if tool_input.get(k) not in (None, "")]
+    for key, value in times:
+        value = str(value).strip()
+        if all_day and DATE_ONLY.match(value):
+            continue
+        if not HAS_OFFSET.search(value):
+            deny("%s %r has no UTC offset. Build it with `tz.py to-iso \"<wall time>\" --zone "
+                 "<IANA zone>` for wherever the event happens." % (key, value))
+    zone_name = tool_input.get("timeZone")
+    if not zone_name or all_day:
+        return
+    try:
+        from zoneinfo import ZoneInfo
+        if "/" not in str(zone_name) and zone_name != "UTC":
+            raise ValueError("abbreviation")
+        tz = ZoneInfo(str(zone_name))
+    except Exception:
+        deny("timeZone %r is not an IANA zone name (use e.g. Europe/London, never EST/GMT)."
+             % zone_name)
+    for key, value in times:
+        t = parse_time(str(value))
+        if t is None or t.tzinfo is None:
+            deny("could not read %s %r." % (key, value))
+        local = t.replace(tzinfo=None).replace(tzinfo=tz)
+        if local.utcoffset() != t.utcoffset():
+            deny("%s %r does not match timeZone %s, and the connector would apply %s over the "
+                 "offset. For events that cross zones (flights), leave timeZone out and keep "
+                 "each end's own offset." % (key, value, zone_name, zone_name))
+
+
 def check_calendar_id(tool_input, cfg):
     cal = str(tool_input.get("calendarId") or "primary").lower()
     if cal not in cfg["owner_calendars"]:
@@ -232,6 +272,9 @@ def check_calendar_id(tool_input, cfg):
 
 def check_create(tool_input, cfg):
     check_calendar_id(tool_input, cfg)
+    if not tool_input.get("startTime") or not tool_input.get("endTime"):
+        deny("create_event needs both startTime and endTime.")
+    check_times(tool_input)
     if tool_input.get("addGoogleMeetUrl") or tool_input.get("googleMeetUrl") \
             or tool_input.get("conferenceData"):
         deny("no Google Meet links. Paul is Zoom-only and Meet implies guests.")
@@ -257,6 +300,7 @@ def check_update(tool_input, session_id, cfg):
     event_id = tool_input.get("eventId")
     if not event_id:
         deny("update_event without an eventId.")
+    check_times(tool_input)
     for key in UPDATE_NEVER:
         if tool_input.get(key):
             deny("%s is never allowed: agents do not change guests or conferencing." % key)

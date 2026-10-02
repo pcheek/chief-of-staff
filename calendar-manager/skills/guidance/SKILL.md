@@ -21,6 +21,10 @@ Every answer Paul gives should only ever need to be given once.
    - Answer "skip it", to "drive time on 10/9?": rule
      `No drive-time blocks on days whose only in-person event is a dinner.`
 
+   A rule that mentions a time names its zone, or says "local", meaning wherever Paul is
+   that day. "No meetings before 9" becomes `No meetings before 9am local time`, unless he
+   meant Boston.
+
    Then save it:
    `G answer Q7 --answer "<his words>" --rule "<the rule>" --scope <agent name, or all>`
 3. A correction with no question attached ("don't color Callie's stuff"):
