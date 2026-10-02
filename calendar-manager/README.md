@@ -19,6 +19,8 @@ remember the answer.
    | `categorizer` | Color categories, free/busy, title formats, reminders. |
    | `notes-reviewer` | Acts on Paul's notes and holds; closes out its own resolved notes. |
    | `one-on-one-auditor` | 1:1 cadence against the confirmed roster (weekly only). |
+   | `invite-reconciler` | Reads only invite emails. Every invite you haven't declined must be on the calendar; a missing one gets a red, busy `NOTE: missing invite` placeholder. |
+   | `offered-times-tracker` | Times you, or your scheduler, offered by email get red, busy `HOLD: offered to <name>` blocks until the thread settles. Also flags confirmed times that never reached the calendar, and double offers. |
 
 3. The run ends with a short report in the task's chat: what changed, childcare flags,
    proposals, and numbered questions, each with the default the agents use until Paul
@@ -63,12 +65,13 @@ can't edit.
 /calendar-manager:run daily dry-run
 ```
 
-The first run seeds five questions where the source SOPs conflict or are out of date:
+The first run seeds six questions where the source SOPs conflict, are out of date, or leave a gap:
 - the notes color (red vs. purple)
 - the airport transit color
 - the current 1:1 roster (the bundled one is MIT-era 2024)
 - the current commute
 - which calendar identity is yours
+- who schedules on your behalf, so their offers get held too
 
 Answer them in the chat.
 

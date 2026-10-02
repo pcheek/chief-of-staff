@@ -66,6 +66,10 @@ SEED_QUESTIONS = [
      "If it differs from config.json owner_emails, edit ~/.claude/calendar-manager/config.json "
      "yourself: the agents are not allowed to.",
      "Both addresses count as you."),
+    ("offered-times-tracker",
+     "Who schedules on your behalf (EA, team members), so the times they offer by email "
+     "count as yours and get held on your calendar?",
+     "Anyone who writes that you are available or could do a time."),
 ]
 
 
@@ -180,10 +184,16 @@ def cmd_init(args, data):
         with open(CONFIG, "w", encoding="utf-8") as fh:
             json.dump(DEFAULT_CONFIG, fh, indent=2)
         print("wrote %s" % CONFIG)
-    if not data.get("seeded"):
-        for agent, question, default in SEED_QUESTIONS:
+    # Seed per question, so a seed added in a later version still reaches old installs,
+    # and one Paul already answered is never asked again.
+    seeded = data.setdefault("seeded_keys", [])
+    if data.get("seeded") and not seeded:  # v0.1 seeded all of its questions at once
+        seeded.extend(norm(q) for _, q, _ in SEED_QUESTIONS[:5])
+    for agent, question, default in SEED_QUESTIONS:
+        if norm(question) not in seeded:
             add_question(data, agent, question, default)
-        data["seeded"] = now()
+            seeded.append(norm(question))
+    data["seeded"] = data.get("seeded") or now()
     save(data)
     print("ready: %s" % HOME)
 

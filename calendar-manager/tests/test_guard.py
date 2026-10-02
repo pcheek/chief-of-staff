@@ -212,6 +212,36 @@ class GuardTest(unittest.TestCase):
         self.assertEqual(self.pre(CAL + "update_event", {
             "eventId": "c1", "addedAttendees": [{"email": CALLIE}]}), "deny")
 
+    # ---- Gmail-driven agents
+
+    def test_gmail_reads_allowed(self):
+        self.guard_session()
+        for tool in ("mcp__Gmail__search_threads", "mcp__Gmail__get_thread",
+                     "mcp__org-connector-gmail__get_message"):
+            self.assertEqual(self.pre(tool, {"query": "filename:ics"}), "allow", tool)
+
+    def test_new_agents_guarded_without_marker(self):
+        for agent in ("calendar-manager:invite-reconciler", "offered-times-tracker"):
+            self.assertEqual(self.pre(CAL + "delete_event", {"eventId": "x"},
+                                      agent_type=agent), "deny", agent)
+
+    def test_missing_invite_placeholder_allowed(self):
+        self.guard_session()
+        self.assertEqual(self.pre(CAL + "create_event", {
+            "summary": "NOTE: missing invite: Board prep", "colorId": "11",
+            "availability": "AVAILABILITY_BUSY", "description": "Invite from x",
+            "startTime": "2026-10-05T14:00:00-04:00", "endTime": "2026-10-05T15:00:00-04:00"}),
+            "allow")
+
+    def test_release_offered_hold(self):
+        self.guard_session()
+        self.see_event({"id": "h1", "summary": "HOLD: offered to Jane Doe: podcast",
+                        "colorId": "11", "start": {"dateTime": "2026-10-06T14:00:00-04:00"},
+                        "end": {"dateTime": "2026-10-06T14:30:00-04:00"}})
+        self.assertEqual(self.pre(CAL + "update_event", {
+            "eventId": "h1", "summary": "DONE: HOLD: offered to Jane Doe: podcast",
+            "availability": "AVAILABILITY_FREE", "notificationLevel": "NONE"}), "allow")
+
     # ---- update
 
     def test_color_and_freebusy_on_guest_event_allowed(self):

@@ -42,6 +42,7 @@ RUN_PROMPT = re.compile(r"(^|[\s/])calendar-manager:", re.I)
 AGENT_NAMES = {
     "conflict-scanner", "commute-planner", "travel-planner",
     "categorizer", "notes-reviewer", "one-on-one-auditor",
+    "invite-reconciler", "offered-times-tracker",
 }
 
 DEFAULT_CONFIG = {

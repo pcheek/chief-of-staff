@@ -20,12 +20,14 @@ messages for the rest of the session.
    - If no Google Calendar connector is available, stop and say so.
 2. **Load context.** Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/SKILL.md`, then
    `~/.claude/calendar-manager/guidance.md` and `questions.md`.
-3. **Dispatch agents in parallel** with the Agent tool. Give each one the mode, the window
-   (daily: now plus 48 hours; weekly: today through the end of the week after next),
-   `dry-run` if set, and the current date.
-   - daily: `conflict-scanner`, `commute-planner`, `travel-planner`, `categorizer`,
-     `notes-reviewer`
-   - weekly: all of those, plus `one-on-one-auditor`
+3. **Dispatch agents** with the Agent tool. Give each one the mode, the window (daily: now
+   plus 48 hours; weekly: today through the end of the week after next), `dry-run` if set,
+   and the current date.
+   - **First, in parallel:** `invite-reconciler` and `offered-times-tracker`. Both look at
+     14 days of Gmail, whatever the mode.
+   - **Then, in parallel:** `conflict-scanner`, `commute-planner`, `travel-planner`,
+     `categorizer`, `notes-reviewer`. Weekly runs also get `one-on-one-auditor`. Running
+     these second means they see the new placeholders and holds.
 
    Agents that write the same events run in this order instead: travel-planner, then
    commute-planner, then categorizer. That way colors are applied last.
@@ -33,6 +35,9 @@ messages for the rest of the session.
 5. **Write the report** to `~/.claude/calendar-manager/runs/<YYYY-MM-DD>-<mode>.md`, with
    these sections:
    - Changes made (drive-time moves first, each with "check childcare")
+   - Missing invites (placeholder created, or not yet accepted, or cancelled but still on
+     the calendar)
+   - Offered times (new holds, confirmed times not on the calendar, double offers)
    - Proposals for Paul
    - Questions
    - Rules applied
@@ -41,6 +46,7 @@ messages for the rest of the session.
 7. **Reply to Paul.** This message is all he sees. Keep it short, in this order:
    - One line: what changed, as counts.
    - Childcare flags, if any.
+   - Missing invites and offered times not on the calendar, one line each.
    - Proposals, one line each.
    - **Questions**: run `guidance.py open`. Number them with their IDs (`Q7`), each with its
      default in brackets.

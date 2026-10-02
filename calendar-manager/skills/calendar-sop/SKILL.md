@@ -121,6 +121,18 @@ it matters when it is.
   event for your notes to Paul.
 - Paul adds notes too. Review them, and act within the guardrails or ask.
 
+## Invites and offered times
+
+- Every invite Paul hasn't declined belongs on his calendar. If one is missing, put a red,
+  busy `NOTE: missing invite` placeholder at its time and report it. Paul accepts from the
+  email, because agents never RSVP.
+- Every time Paul offers by email, himself or through his scheduler, stays protected until
+  the thread settles. Each open offered slot gets a red, busy `HOLD: offered to <name>`.
+- When the real event appears, the thread settles on another time, or the offer goes cold,
+  notes-reviewer releases the hold: it retitles the hold `DONE:` and makes it free. Holds
+  are never deleted.
+- Flag, don't act. Never reply to the thread or invite anyone.
+
 ## Out of office vs WFH
 
 - OOO is red. Meetings during OOO should be declined, but you can't decline, so make a red

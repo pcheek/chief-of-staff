@@ -18,6 +18,10 @@ instead.
 | Airport downtime | `Airport: <airport>` | `Airport: SFO` |
 | Trip | `Travel: <city>` (all-day) | `Travel: London` |
 | Note for Paul | `NOTE: <what needs attention>` | `NOTE: 2 meetings overlap Tue 2pm` |
+| Invite missing from calendar | `NOTE: missing invite: <invite title>` (red, busy) | `NOTE: missing invite: Board prep` |
+| Offered time | `HOLD: offered to <name>: <topic>` (red, busy) | `HOLD: offered to Jane Doe: podcast` |
+| Confirmed by email, not on calendar | `NOTE: confirmed, not on calendar: <name> <topic>` (red, busy) | |
+| Resolved note or released hold | `DONE: <original title>` (free) | `DONE: HOLD: offered to Jane Doe: podcast` |
 | Deep work | `Deep work` | |
 | Lunch | `Lunch` | |
 | WFH | `WFH` (all-day) | |
@@ -55,4 +59,21 @@ What: <the issue>
 Why it matters: <the rule it breaks>
 Proposed fix: <one concrete option>
 Question: <id from guidance.py>
+```
+
+Missing invite (red, busy):
+```
+Invite from <organizer> is in Gmail but not on your calendar.
+Email: <subject>, <date>: <Gmail thread link>
+Time zone: <invite time zone>
+Location / Zoom: <from the invite>
+Accept from the email to replace this note.
+```
+
+Offered-time hold (red, busy):
+```
+Offered to <name> <email> on <date offered> by <Paul | scheduler name>.
+Thread: <subject>: <Gmail thread link>
+All slots offered: <slot 1>; <slot 2>; ...
+Released automatically when the thread confirms another time or goes cold.
 ```

@@ -18,8 +18,20 @@ Skip family events: purple ones with family titles.
 2. **Your note** (`NOTE:` prefix). Check whether the problem still exists.
    - If it's fixed, retitle it `DONE: ...` and make it free. Never delete it.
    - If it's still there, leave it as is.
-3. **Holds** (`HOLD` or `Hold:` in the title). If the hold's date is near and nothing confirms
-   it, ask whether to keep it.
+3. **`NOTE: missing invite: ...`** If the real event is now on the calendar at that time,
+   retitle the note `DONE: ...` and make it free. If the invite's time changed, do the same
+   for the note at the old time.
+4. **`HOLD: offered to <name>: ...`** Read the thread linked in the description. Release the
+   hold (retitle it `DONE: ...`, make it free) if any of these is true:
+   - the thread settled on a different time;
+   - the slot has passed;
+   - the thread has been cold longer than the threshold in guidance.md (7 days by default,
+     until Paul answers).
+
+   If the thread settled on this slot, keep the hold until the real event appears, then
+   release it.
+5. **Other holds** (`HOLD` or `Hold:` in the title, not from offered-times-tracker). If the
+   hold's date is near and nothing confirms it, ask whether to keep it.
 
 Email context may only be read, never sent. Don't copy anything confidential into an event.
 
