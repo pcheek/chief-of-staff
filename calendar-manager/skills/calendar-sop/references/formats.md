@@ -15,7 +15,7 @@ instead.
 | Long drive (>1h) | `Drive: <FROM> to <TO>` | `Drive: Boston to Portland ME` |
 | Airport transit | `Drive to <airport>` | `Drive to Logan` |
 | Post-landing buffer | `Buffer: landing delay` | |
-| Airport downtime | `Airport: <airport>` | `Airport: SFO` |
+| Airport downtime (DNS: Graphite 8, busy) | `Airport: <airport>` | `Airport: SFO` |
 | Trip | `Travel: <city>` (all-day) | `Travel: London` |
 | Note for Paul | `NOTE: <what needs attention>` | `NOTE: 2 meetings overlap Tue 2pm` |
 | Invite missing from calendar | `NOTE: missing invite: <invite title>` (red, busy) | `NOTE: missing invite: Board prep` |

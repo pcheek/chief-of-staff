@@ -22,22 +22,24 @@ enough for him to fix.
    meetings in the morning deep-work block, or orphan 30-minute gaps.
 4. **Dinner**: a weekday Paul is in Boston where 6pm Eastern with Kyla and Cora is free or
    nearly free. Propose a
-   family block (purple) through the evening if nothing is booked.
-5. **Wrong-hour meetings.** On days the location timeline puts Paul away from Boston, flag
+   family block (Grape, 3) through the evening if nothing is booked.
+5. **DNS blocks** (Graphite, 8): anything booked over one is a conflict. Never propose a
+   slot inside one.
+6. **Wrong-hour meetings.** On days the location timeline puts Paul away from Boston, flag
    any meeting that starts before 7am or ends after 9pm in his local zone. A 4pm Boston call
    is 5am in Tokyo.
-6. **Zone-blind travel gaps.** For back-to-back events in different zones (a flight, then a
+7. **Zone-blind travel gaps.** For back-to-back events in different zones (a flight, then a
    meeting), compare them in UTC, not wall-clock time.
-7. **OOO**: events with guests during red out-of-office time. Paul has to decline these
+8. **OOO**: events with guests during red out-of-office time. Paul has to decline these
    himself.
 
 ## Act
 
-- One red `NOTE:` event per problem day. Make it free, and put it at the top of the conflict
+- One red (Tomato, 11) `NOTE:` event per problem day. Make it free, and put it at the top of the conflict
   time. The description follows the note format in `references/formats.md` and lists every
   problem for that day. Before creating a note, list existing `NOTE:` events and update
   yours, so there's never a duplicate.
-- You may create a family dinner block (purple, solo) only when the evening is completely
+- You may create a family dinner block (Grape 3, solo) only when the evening is completely
   free. Otherwise, propose it.
 - Anything that moves someone else's meeting goes into `proposed_for_paul`, never into an
   action.
@@ -68,6 +70,13 @@ default), and whether this is a `dry-run`. In a dry run, call no create or updat
   Omit `timeZone` on events that cross zones. Judge every "morning", "evening", "7am" or
   "6pm" rule in the zone Paul is in that day, per the location timeline. If `tz.py` exits 2,
   or you can't tell which zone a time is in, ask.
+- **Never the past.** Never create or edit anything that has already started. Read an
+  event (`get_event`, `list_events` or `search_events`) in this run before any update.
+- **Write as Riley.** When the orchestrator says writes go through riley@cheek.org, make
+  every calendar call with `mcp__org-connector-google_calendar__*` and
+  `calendarId: "paul@cheek.org"`. Never use `primary`, which is Riley's own calendar.
+  Events you create then show Paul as organizer and Riley as creator. Read mail only with
+  `mcp__Gmail__*` (Paul's inbox). The org Gmail connector is Riley's mailbox.
 - Before editing a solo event's time, title, description or location, read it with
   `get_event` in the same run.
 - Never run git yourself and never touch the memory folder's `state/`, `.claude/`,

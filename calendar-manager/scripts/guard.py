@@ -17,6 +17,10 @@ What a guarded session may do to Google Calendar:
     the last 30 minutes: also change time, title, description, location and reminders
   * invite exactly one person, Callie, to a qualifying travel event (see callie_ok)
   * every timed start/end carries an explicit UTC offset, and any timeZone agrees with it
+  * nothing in the past is ever created or edited, and an event must be read (get, list or
+    search) in this session before it can be updated
+  * with writer_servers/calendar_id configured (cloud: riley@cheek.org's connector), every
+    write goes through that connector to Paul's calendar by explicit id, never "primary"
 
 What a guarded session may never touch (see protected()):
   * the guard's state and config, by any mention, in any tool
@@ -80,6 +84,10 @@ DEFAULT_CONFIG = {
     "callie_email": "calliemcheek@gmail.com",
     "travel_color_ids": ["1"],
     "home_timezone": "America/New_York",
+    # Write identity. Empty = write through any calendar connector to "primary" (desktop).
+    "calendar_id": "",          # e.g. paul@cheek.org: every write must name it explicitly
+    "writer_servers": [],       # e.g. ["org-connector-google_calendar"] (riley@cheek.org)
+    "agent_identity": "",       # e.g. riley@cheek.org: events it created are agent-made
 }
 
 # Calendar MCP actions a guarded session may call. Anything else on a calendar server
@@ -129,7 +137,41 @@ def config():
     cfg["owner_calendars"] = [c.lower() for c in cfg["owner_calendars"]] + ["primary"]
     cfg["callie_email"] = cfg["callie_email"].lower()
     cfg["travel_color_ids"] = [str(c) for c in cfg["travel_color_ids"]]
+    cfg["calendar_id"] = str(cfg.get("calendar_id") or "").lower()
+    cfg["writer_servers"] = [str(w).lower() for w in cfg.get("writer_servers") or []]
+    cfg["agent_identity"] = str(cfg.get("agent_identity") or "").lower()
+    if cfg["agent_identity"]:
+        cfg["owner_emails"] = cfg["owner_emails"] + [cfg["agent_identity"]]
     return cfg
+
+
+def now_utc():
+    override = os.environ.get("CALENDAR_MANAGER_NOW")  # tests only
+    if override:
+        t = parse_time(override)
+        if t is not None and t.tzinfo is not None:
+            return t
+    return dt.datetime.now(dt.timezone.utc)
+
+
+def is_past(start, all_day, cfg):
+    """True when an event starting at `start` has already begun. Unreadable counts as past:
+    the guard never edits what it can't place in time."""
+    if not start:
+        return True
+    start = str(start)
+    if all_day or DATE_ONLY.match(start):
+        try:
+            from zoneinfo import ZoneInfo
+            today = now_utc().astimezone(ZoneInfo(cfg.get("home_timezone") or
+                                                  "America/New_York")).date()
+            return dt.date.fromisoformat(start[:10]) < today
+        except Exception:
+            return True
+    t = parse_time(start)
+    if t is None or t.tzinfo is None:
+        return True
+    return t < now_utc()
 
 
 def safe_id(session_id):
@@ -198,16 +240,26 @@ def mark_guarded(session_id):
             pass
 
 
-def known_event(session_id, event_id):
-    """Details of an event this guard has verified to be solo, or None."""
+def seen_event(session_id, event_id):
+    """What this guard knows about an event: one the agents created, or one a read in this
+    session returned within the last 30 minutes. None if neither."""
     if not event_id:
         return None
     created = load_json(CREATED, {})
     if event_id in created:
-        return created[event_id]
+        return dict(created[event_id], solo=True, agent_created=True)
     seen = load_json(os.path.join(SOLO_DIR, safe_id(session_id) + ".json"), {})
     rec = seen.get(event_id)
     if rec and time.time() - rec.get("seen_at", 0) <= SOLO_TTL:
+        return rec
+    return None
+
+
+def known_event(session_id, event_id):
+    """An event the agents may fully edit: solo, or created by the agents (by this
+    session's ledger, or by agent_identity per the event's creator)."""
+    rec = seen_event(session_id, event_id)
+    if rec and (rec.get("solo", True) or rec.get("agent_created")):
         return rec
     return None
 
@@ -295,9 +347,24 @@ def check_times(tool_input):
 
 
 def check_calendar_id(tool_input, cfg):
+    if cfg["calendar_id"]:
+        cal = str(tool_input.get("calendarId") or "").lower()
+        if cal != cfg["calendar_id"]:
+            deny("every write must name Paul's calendar explicitly: calendarId \"%s\" (got %r). "
+                 "Through riley@cheek.org's connector, \"primary\" is Riley's own calendar."
+                 % (cfg["calendar_id"], cal or "(none)"))
+        return
     cal = str(tool_input.get("calendarId") or "primary").lower()
     if cal not in cfg["owner_calendars"]:
         deny("events may only be written to Paul's own calendar (got calendarId %r)." % cal)
+
+
+def check_writer(server, cfg):
+    if cfg["writer_servers"] and server not in cfg["writer_servers"]:
+        deny("calendar writes go only through %s, so they show as created by %s. Use that "
+             "connector with calendarId \"%s\"." % (", ".join(cfg["writer_servers"]),
+                                                  cfg["agent_identity"] or "the agent account",
+                                                  cfg["calendar_id"] or "primary"))
 
 
 def check_create(tool_input, cfg):
@@ -305,6 +372,8 @@ def check_create(tool_input, cfg):
     if not tool_input.get("startTime") or not tool_input.get("endTime"):
         deny("create_event needs both startTime and endTime.")
     check_times(tool_input)
+    if is_past(tool_input.get("startTime"), tool_input.get("allDay"), cfg):
+        deny("nothing is ever created in the past (start %s)." % tool_input.get("startTime"))
     if tool_input.get("addGoogleMeetUrl") or tool_input.get("googleMeetUrl") \
             or tool_input.get("conferenceData"):
         deny("no Google Meet links. Paul is Zoom-only and Meet implies guests.")
@@ -331,6 +400,15 @@ def check_update(tool_input, session_id, cfg):
     if not event_id:
         deny("update_event without an eventId.")
     check_times(tool_input)
+    rec = seen_event(session_id, event_id)
+    if rec is None:
+        deny("read this event (get_event, list_events or search_events) in this session before "
+             "updating it, so the guard knows what it is and when it is.")
+    if is_past(rec.get("start"), rec.get("allDay"), cfg):
+        deny("past events are never edited (this one started %s)." % rec.get("start"))
+    if tool_input.get("startTime") and is_past(tool_input["startTime"],
+                                               tool_input.get("allDay"), cfg):
+        deny("an event is never moved into the past (new start %s)." % tool_input["startTime"])
     for key in UPDATE_NEVER:
         if tool_input.get(key):
             deny("%s is never allowed: agents do not change guests or conferencing." % key)
@@ -340,10 +418,10 @@ def check_update(tool_input, session_id, cfg):
     if added:
         if added != {cfg["callie_email"]}:
             deny("adding guests is not allowed (%s)." % ", ".join(sorted(added)))
-        rec = known_event(session_id, event_id)
-        if rec is None:
+        solo = known_event(session_id, event_id)
+        if solo is None:
             deny("Callie can only be added to a solo event; read it with get_event first.")
-        merged = dict(rec)
+        merged = dict(solo)
         for src, dst in (("summary", "summary"), ("colorId", "colorId"), ("allDay", "allDay"),
                          ("startTime", "start"), ("endTime", "end")):
             if tool_input.get(src) not in (None, ""):
@@ -379,6 +457,7 @@ def check_pre(event, cfg):
         if action not in CAL_ALLOWED_WRITES:
             deny("%s is not allowed. Agents never delete events, RSVP, decline, or change "
                  "calendars." % action)
+        check_writer(low.split("__")[1], cfg)
         if action == "create_event":
             check_create(tool_input, cfg)
         else:
@@ -656,12 +735,15 @@ def record_post(event, cfg):
         seen = load_json(path, {})
         seen = {k: v for k, v in seen.items() if now - v.get("seen_at", 0) <= SOLO_TTL}
         for ev in events:
-            if is_solo(ev, cfg):
-                rec = details(ev)
-                rec["seen_at"] = now
-                seen[ev["id"]] = rec
-            else:
-                seen.pop(ev["id"], None)
+            rec = details(ev)
+            rec["seen_at"] = now
+            rec["solo"] = is_solo(ev, cfg)
+            creator = ev.get("creator") or {}
+            rec["creator"] = str(creator.get("email", "")).lower() if isinstance(creator, dict) \
+                else ""
+            rec["agent_created"] = bool(cfg["agent_identity"]) and \
+                rec["creator"] == cfg["agent_identity"]
+            seen[ev["id"]] = rec
         save_json(path, seen)
 
 

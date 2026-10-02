@@ -15,7 +15,10 @@ CALLIE = "calliemcheek@gmail.com"
 class GuardTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.env = dict(os.environ, CALENDAR_MANAGER_HOME=self.tmp.name)
+        self.env = dict(os.environ, CALENDAR_MANAGER_HOME=self.tmp.name,
+                        CALENDAR_MANAGER_NOW="2026-10-01T12:00:00Z")
+        for key in ("CALENDAR_MANAGER_CONFIG", "CALENDAR_MANAGER_CONFIG_JSON"):
+            self.env.pop(key, None)
         self.sid = "sess-1"
 
     def tearDown(self):
@@ -379,10 +382,112 @@ class GuardTest(unittest.TestCase):
             "summary": "Travel: Tokyo", "allDay": True, "colorId": "1",
             "startTime": "2026-11-02", "endTime": "2026-11-06"}), "allow")
 
+    # ---- never the past
+
+    def test_create_in_past_denied(self):
+        self.guard_session()
+        self.assertEqual(self.pre(CAL + "create_event", {
+            "summary": "Drive time", "startTime": "2026-09-30T08:00:00-04:00",
+            "endTime": "2026-09-30T09:00:00-04:00"}), "deny")
+        self.assertEqual(self.pre(CAL + "create_event", {
+            "summary": "WFH", "allDay": True, "startTime": "2026-09-30",
+            "endTime": "2026-10-01"}), "deny")
+        self.assertEqual(self.pre(CAL + "create_event", {
+            "summary": "WFH", "allDay": True, "startTime": "2026-10-01",
+            "endTime": "2026-10-02"}), "allow")  # today in Boston still counts
+
+    def test_update_unseen_event_denied(self):
+        self.guard_session()
+        self.assertEqual(self.pre(CAL + "update_event", {
+            "eventId": "zz", "colorId": "2", "notificationLevel": "NONE"}), "deny")
+
+    def test_update_on_started_event_denied_even_color(self):
+        self.guard_session()
+        self.see_event({"id": "old", "summary": "Deep work",
+                        "start": {"dateTime": "2026-10-01T07:00:00-04:00"},
+                        "end": {"dateTime": "2026-10-01T09:00:00-04:00"}})
+        self.assertEqual(self.pre(CAL + "update_event", {
+            "eventId": "old", "colorId": "2", "notificationLevel": "NONE"}), "deny")
+        self.see_event({"id": "yday", "summary": "Travel: Paris",
+                        "start": {"date": "2026-09-30"}, "end": {"date": "2026-10-02"}})
+        self.assertEqual(self.pre(CAL + "update_event", {
+            "eventId": "yday", "colorId": "1", "notificationLevel": "NONE"}), "deny")
+
+    def test_update_cannot_move_into_past(self):
+        self.guard_session()
+        self.see_event({"id": "d2", "summary": "Drive time",
+                        "start": {"dateTime": "2026-10-05T08:00:00-04:00"},
+                        "end": {"dateTime": "2026-10-05T09:00:00-04:00"}})
+        self.assertEqual(self.pre(CAL + "update_event", {
+            "eventId": "d2", "startTime": "2026-09-29T08:00:00-04:00",
+            "notificationLevel": "NONE"}), "deny")
+
+    # ---- writes as riley@cheek.org
+
+    RILEY = "mcp__org-connector-google_calendar__"
+
+    def riley_config(self):
+        self.env["CALENDAR_MANAGER_CONFIG_JSON"] = json.dumps({
+            "calendar_id": "paul@cheek.org",
+            "writer_servers": ["org-connector-google_calendar"],
+            "agent_identity": "riley@cheek.org"})
+        self.guard_session()
+
+    def test_writes_only_through_riley_to_paul_by_id(self):
+        self.riley_config()
+        base = {"summary": "Drive time", "colorId": "1",
+                "startTime": "2026-10-05T08:00:00-04:00", "endTime": "2026-10-05T09:00:00-04:00"}
+        self.assertEqual(self.pre(CAL + "create_event", dict(base, calendarId="paul@cheek.org")),
+                         "deny")  # Paul's own connector: not the writer
+        self.assertEqual(self.pre(self.RILEY + "create_event", base), "deny")
+        self.assertEqual(self.pre(self.RILEY + "create_event", dict(base, calendarId="primary")),
+                         "deny")
+        self.assertEqual(self.pre(self.RILEY + "create_event",
+                                  dict(base, calendarId="paul@cheek.org")), "allow")
+        self.assertEqual(self.pre(CAL + "list_events", {}), "allow")
+        self.assertEqual(self.pre(self.RILEY + "list_events", {"calendarId": "paul@cheek.org"}),
+                         "allow")
+
+    def test_riley_created_event_is_fully_editable_after_read(self):
+        self.riley_config()
+        self.post(self.RILEY + "get_event", {
+            "id": "f1", "summary": "Flight: BOS to LHR", "colorId": "1",
+            "start": {"dateTime": "2026-10-13T18:30:00-04:00"},
+            "end": {"dateTime": "2026-10-14T06:25:00+01:00"},
+            "creator": {"email": "riley@cheek.org"},
+            "organizer": {"email": "paul@cheek.org"},
+            "attendees": [{"email": CALLIE}]})
+        self.assertEqual(self.pre(self.RILEY + "update_event", {
+            "eventId": "f1", "calendarId": "paul@cheek.org", "description": "BA 212, seat 3A",
+            "notificationLevel": "NONE"}), "allow")
+        # Same shape, but Paul made it and it has a guest: color only.
+        self.post(self.RILEY + "get_event", {
+            "id": "p1", "summary": "Dinner", "start": {"dateTime": "2026-10-13T18:30:00-04:00"},
+            "creator": {"email": "paul@cheek.org"}, "organizer": {"email": "paul@cheek.org"},
+            "attendees": [{"email": "friend@example.com"}]})
+        self.assertEqual(self.pre(self.RILEY + "update_event", {
+            "eventId": "p1", "calendarId": "paul@cheek.org", "description": "x",
+            "notificationLevel": "NONE"}), "deny")
+        self.assertEqual(self.pre(self.RILEY + "update_event", {
+            "eventId": "p1", "calendarId": "paul@cheek.org", "colorId": "3",
+            "notificationLevel": "NONE"}), "allow")
+
+    def test_riley_reading_paul_event_counts_paul_as_owner(self):
+        self.riley_config()
+        self.post(self.RILEY + "get_event", {
+            "id": "s1", "summary": "Deep work", "start": {"dateTime": "2026-10-05T07:00:00-04:00"},
+            "creator": {"email": "paul@cheek.org"}, "organizer": {"email": "paul@cheek.org"},
+            "attendees": [{"email": "paul@cheek.org"}]})
+        self.assertEqual(self.pre(self.RILEY + "update_event", {
+            "eventId": "s1", "calendarId": "paul@cheek.org", "startTime": "2026-10-05T07:30:00-04:00",
+            "notificationLevel": "NONE"}), "allow")
+
     # ---- update
 
     def test_color_and_freebusy_on_guest_event_allowed(self):
         self.guard_session()
+        self.see_event({"id": "g1", "summary": "1:1", "start": {"dateTime": "2026-10-05T10:00:00-04:00"},
+                        "attendees": [{"email": "colleague@mit.edu"}]})
         self.assertEqual(self.pre(CAL + "update_event", {
             "eventId": "g1", "colorId": "9", "availability": "AVAILABILITY_BUSY",
             "notificationLevel": "NONE"}), "allow")

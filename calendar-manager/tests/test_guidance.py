@@ -42,19 +42,38 @@ class GuidanceTest(unittest.TestCase):
         self.assertNotIn("Q1", [q["id"] for q in open_qs])
 
     def test_v01_install_gets_only_new_seeds(self):
-        # A v0.1 install: five seeds, a single "seeded" flag, no seeded_keys.
-        self.g("init")
-        d = self.data()
-        d.pop("seeded_keys")
-        d["questions"] = d["questions"][:5]
-        d["questions"][0]["status"] = "answered"
+        # A real v0.1 guidance.json: its five seeds, a single "seeded" flag, no seeded_keys.
+        v01 = [
+            "Notes and holds: the 2024 calendar doc says purple, the Apr 2025 SOP says red "
+            "(Tomato). Which color marks a note that needs your review?",
+            "Airport transit: the SOP's flight steps say purple, its color legend says lavender "
+            "for travel. Which color for driving to the airport?",
+            "The 1:1 roster in the calendar doc is the MIT Trust Center team from 2024. Which of "
+            "those 1:1s still exist, and who is on your current roster with what cadence?",
+            "Which days and where do you commute now (the doc assumes MIT, 45 minutes, blocked "
+            "as one hour)? Is Friday still the standard work-from-home day?",
+            "Which email is the calendar these runs manage (paul@cheek.org or pcheek@mit.edu)? "
+            "If it differs from config.json owner_emails, edit ~/.claude/calendar-manager/"
+            "config.json yourself: the agents are not allowed to.",
+        ]
+        d = {"rules": [], "seeded": "2026-10-01T00:00:00-04:00",
+             "questions": [{"id": "Q%d" % (i + 1), "agent": "x", "question": q,
+                            "status": "open", "created": "2026-10-01", "last_asked": "",
+                            "times_asked": 1, "events": []} for i, q in enumerate(v01)]}
         with open(os.path.join(self.tmp.name, "guidance.json"), "w") as fh:
             json.dump(d, fh)
         self.g("init")
         qs = self.data()["questions"]
-        # The answered v0.1 question stays answered; every later seed arrives exactly once.
-        self.assertEqual(len(qs), 5 + 2)
-        self.assertEqual(sum(q["status"] == "open" for q in qs), 4 + 2)
+        added = [q["question"] for q in qs[5:]]
+        self.assertEqual(len(added), 2, added)  # time zone + who schedules for you
+        self.assertTrue(any("time zone" in q for q in added))
+        self.assertTrue(any("schedules on your behalf" in q for q in added))
+
+    def test_fresh_install_never_asks_the_retired_notes_color(self):
+        self.g("init")
+        texts = [q["question"] for q in self.data()["questions"]]
+        self.assertEqual(len(texts), 6)
+        self.assertFalse([t for t in texts if t.startswith("Notes and holds")])
 
     def test_duplicate_question_is_merged(self):
         self.g("ask", "--agent", "a", "--question", "Overlap Tue 2pm?")

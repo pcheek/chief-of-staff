@@ -27,7 +27,17 @@ retries when another run pushed first and never force-pushes.
    - `G init`. It's idempotent, and on the first run it seeds questions about gaps in the
      SOP. Read any WARNING it prints about config or `.gitignore` into the report.
    - Get the current time: `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/tz.py" now`.
-   - If no Google Calendar connector is available, stop and say so.
+   - **Write identity.** `G where` shows the config. If it names a `calendar_id`
+     (paul@cheek.org), every write goes through riley@cheek.org's calendar connector
+     (`mcp__org-connector-google_calendar__*`).
+     - Call its `list_calendars` and confirm `paul@cheek.org` is listed. If it isn't, stop
+       and report: "Paul's calendar isn't shared with riley@cheek.org (Make changes to
+       events)."
+     - Tell every agent: "writes go through riley@cheek.org, calendarId paul@cheek.org".
+   - Without a `calendar_id` (desktop), use Paul's Google Calendar connector. If no calendar
+     connector is available, stop and say so.
+   - Paul's Gmail connector (`mcp__Gmail__*`) is required for invites and offered times.
+     Never use the org Gmail connector, which is Riley's mailbox.
 2. **Load context.** Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/SKILL.md`, then
    `guidance.md` and `questions.md` in the memory folder.
 3. **Build the location timeline** for the window (`references/timezones.md`).
@@ -92,6 +102,9 @@ Replies can come hours later, after this container was recycled, so nothing wait
 end of the conversation. The session stays guarded, so the same guardrails apply.
 
 ## Never
+
+- Create or edit anything that has already started. The guard blocks it, and every update
+  needs a read of that event in this run first.
 
 - Run `git` on the memory folder yourself, `git add -f`, or force-push. `G sync` is the only
   way memory gets committed.

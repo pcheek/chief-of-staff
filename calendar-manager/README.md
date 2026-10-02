@@ -62,6 +62,24 @@ committed. So a run can edit an event's time, title or description only when it 
 event and confirmed it solo in that same run. Agent-created events from earlier runs get
 the same read-first treatment.
 
+## Writes come from riley@cheek.org
+
+With `calendar_id`, `writer_servers` and `agent_identity` in the config (the cloud default):
+- every create and update goes through riley@cheek.org's calendar connector
+  (`org-connector-google_calendar`), to `calendarId: "paul@cheek.org"` by explicit id;
+- events land on Paul's calendar with **Paul as organizer and Riley as creator**, so it's
+  obvious what the agents made versus what Paul made by hand;
+- the guard denies writes through any other calendar connector, and any write naming
+  `primary` or no calendar (through Riley's connector that would be Riley's own calendar);
+- an event whose creator is Riley counts as agent-made, so a run can edit it after reading
+  it, even though `state/` doesn't survive between cloud runs.
+
+Paul's Gmail is still read through his own Gmail connector, because the org Gmail
+connector is Riley's mailbox.
+
+Setup is one step: share `paul@cheek.org` with `riley@cheek.org` with **Make changes to
+events** (not "Make changes and manage sharing").
+
 ## Time zones
 
 Paul lives in Boston and is often elsewhere, so every run builds a **location timeline**
@@ -102,6 +120,9 @@ Paul's other sessions are unaffected.
 | | Writes to the guard's code, or to the memory repo's `.claude/`, `.gitignore` or `.gitattributes` |
 | | `git add -f`, staging `state/` or a config file, `git push --force` (any form), deleting remote branches |
 | | Timed events without an explicit UTC offset, a `timeZone` that contradicts the offsets, or abbreviations like EST/GMT |
+| | **Anything in the past:** creating it, editing it (even its color), or moving an event into it |
+| | Updating an event the run hasn't read (get, list or search) in the last 30 minutes |
+| | With the cloud config: writes through any connector other than Riley's, or to any calendar but `paul@cheek.org` by explicit id |
 
 A denied call is final. The agent logs a question instead.
 

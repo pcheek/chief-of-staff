@@ -21,8 +21,8 @@ Never batch answers for the end of the conversation.
    he means. Never guess.
 2. For each answer, write the rule the agents will follow. It should be general,
    imperative, and specific enough to act on without the question:
-   - Answer "red", to "which color for notes": rule
-     `Notes and holds for Paul are red (Tomato, colorId 11). Purple is family only.`
+   - Answer "Sage", to "which color for gym time": rule
+     `Gym and workouts are Deep Work / Personal (Sage, colorId 2).`
    - Answer "skip it", to "drive time on 10/9?": rule
      `No drive-time blocks on days whose only in-person event is a dinner.`
 

@@ -36,6 +36,13 @@ the guardrails.
   needs to move, ask Paul and propose the move.
 - **Create** only on Paul's own calendar, with no guests (Callie aside), no Google Meet, and
   no rooms.
+- **Never create or edit anything in the past.** Only events that haven't started yet are
+  touched. The guard also requires you to read an event in the same run before you update it.
+- **All writes come from riley@cheek.org** when the config names a `calendar_id`. Use Riley's
+  calendar connector (`org-connector-google_calendar`) with `calendarId: "paul@cheek.org"`
+  on every call, never `primary`, which is Riley's own calendar. Events then show Paul as
+  organizer and Riley as creator, so Paul can tell agent-made events from his own. Read
+  Paul's mail only through his own Gmail connector, never Riley's.
 - **On any existing event**, change only the color (`colorId`) and free/busy (`availability`),
   with `notificationLevel: "NONE"`.
 - **On a solo event** (no guests), you may also change the time, title, description, location
@@ -87,7 +94,7 @@ it matters when it is.
 ## Shape of a good day (in Paul's local zone that day)
 
 - Home time before the morning commute.
-- Deep work first thing at the office (green). This is his best thinking time, so protect it.
+- Deep work first thing at the office (Sage, 2). This is his best thinking time, so protect it.
   Deep work gets no notifications.
 - Meetings back to back, with no orphan 30-minute gaps between them.
 - A lunch break, long enough to grab a bite.
@@ -125,7 +132,7 @@ it matters when it is.
 - Flights use exact times in the title or description (for example 10:45 to 12:09), with the
   flight number.
 - Add a 20 to 30 minute buffer after landing for delays.
-- Downtime at the airport or in transit is gray.
+- Downtime at the airport or in transit is Do Not Schedule (Graphite, 8): busy, never booked into.
 - Add an all-day `Travel: <place>` event for each trip and invite Callie to it. Also invite
   her to each flight, train, bus and long drive (see Guardrails).
 - Double-check every flight and travel time against the confirmation email before writing it.
@@ -163,7 +170,7 @@ it matters when it is.
 ## Personal events
 
 His personal life shares this calendar. Invites from Callie come from calliemcheek@gmail.com,
-bypass the inbox, and are gray. Don't recolor them.
+bypass the inbox. Don't recolor them.
 
 ## Free/busy
 

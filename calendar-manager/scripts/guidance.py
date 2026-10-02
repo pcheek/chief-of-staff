@@ -71,15 +71,18 @@ DEFAULT_CONFIG = {
 SEED_ALIASES = {
     "which email is the calendar these runs manage paul cheek org or pcheek mit edu if it "
     "differs from config json owner emails edit claude calendar manager config json yourself "
-    "the agents are not allowed to": 4,
+    "the agents are not allowed to": 3,
 }
+V01_IDENTITY = next(iter(SEED_ALIASES))
+
+# Seeds Paul has settled outside a run. They're marked seeded and never asked.
+RETIRED_SEEDS = [
+    "Notes and holds: the 2024 calendar doc says purple, the Apr 2025 SOP says red "
+    "(Tomato). Which color marks a note that needs your review?",  # Legend: Needs Review = 11
+]
 
 # Gaps and contradictions in the source SOPs. Each run asks until Paul answers.
 SEED_QUESTIONS = [
-    ("categorizer",
-     "Notes and holds: the 2024 calendar doc says purple, the Apr 2025 SOP says red "
-     "(Tomato). Which color marks a note that needs your review?",
-     "Red (Tomato, colorId 11), per the newer SOP. Purple (Grape) stays family time."),
     ("travel-planner",
      "Airport transit: the SOP's flight steps say purple, its color legend says lavender for "
      "travel. Which color for driving to the airport?",
@@ -284,11 +287,15 @@ def cmd_init(args, data):
     # and one Paul already answered is never asked again.
     seeded = data.setdefault("seeded_keys", [])
     if data.get("seeded") and not seeded:  # v0.1 seeded all of its questions at once
-        seeded.extend(norm(q) for _, q, _ in SEED_QUESTIONS[:5])
+        # v0.1 asked: notes color (now retired), airport, roster, commute, old identity wording
+        seeded.extend([norm(q) for _, q, _ in SEED_QUESTIONS[:3]] + [V01_IDENTITY])
     for old, idx in SEED_ALIASES.items():
         new = norm(SEED_QUESTIONS[idx][1])
         if old in seeded and new not in seeded:
             seeded.append(new)
+    for retired in RETIRED_SEEDS:
+        if norm(retired) not in seeded:
+            seeded.append(norm(retired))
     for agent, question, default in SEED_QUESTIONS:
         key = norm(question)
         if key not in seeded:

@@ -1,7 +1,7 @@
 ---
 name: offered-times-tracker
 description: "Daily check that every time Paul (or his EA or team on his behalf) offered to someone by email is protected on his calendar. Scans Sent mail and threads he is on, extracts each future time slot offered or agreed to, and creates red busy HOLD: offered to <name> events for open offers, flags confirmed times that never reached the calendar, double-offered slots and cold threads. Never replies or invites."
-tools: Read, Glob, Grep, Bash, mcp__Google_Calendar__list_calendars, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event, mcp__Google_Calendar__search_events, mcp__Google_Calendar__create_event, mcp__Google_Calendar__update_event, mcp__org-connector-google_calendar__list_calendars, mcp__org-connector-google_calendar__list_events, mcp__org-connector-google_calendar__get_event, mcp__org-connector-google_calendar__search_events, mcp__org-connector-google_calendar__create_event, mcp__org-connector-google_calendar__update_event, mcp__Gmail__search_threads, mcp__Gmail__get_thread, mcp__Gmail__get_message, mcp__org-connector-gmail__search_threads, mcp__org-connector-gmail__get_thread, mcp__org-connector-gmail__get_message
+tools: Read, Glob, Grep, Bash, mcp__Google_Calendar__list_calendars, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event, mcp__Google_Calendar__search_events, mcp__Google_Calendar__create_event, mcp__Google_Calendar__update_event, mcp__org-connector-google_calendar__list_calendars, mcp__org-connector-google_calendar__list_events, mcp__org-connector-google_calendar__get_event, mcp__org-connector-google_calendar__search_events, mcp__org-connector-google_calendar__create_event, mcp__org-connector-google_calendar__update_event, mcp__Gmail__search_threads, mcp__Gmail__get_thread, mcp__Gmail__get_message
 ---
 
 When Paul offers someone a time, that time has to stay free until they answer. You make sure
@@ -87,6 +87,13 @@ default), and whether this is a `dry-run`. In a dry run, call no create or updat
   Omit `timeZone` on events that cross zones. Judge every "morning", "evening", "7am" or
   "6pm" rule in the zone Paul is in that day, per the location timeline. If `tz.py` exits 2,
   or you can't tell which zone a time is in, ask.
+- **Never the past.** Never create or edit anything that has already started. Read an
+  event (`get_event`, `list_events` or `search_events`) in this run before any update.
+- **Write as Riley.** When the orchestrator says writes go through riley@cheek.org, make
+  every calendar call with `mcp__org-connector-google_calendar__*` and
+  `calendarId: "paul@cheek.org"`. Never use `primary`, which is Riley's own calendar.
+  Events you create then show Paul as organizer and Riley as creator. Read mail only with
+  `mcp__Gmail__*` (Paul's inbox). The org Gmail connector is Riley's mailbox.
 - Before editing a solo event's time, title, description or location, read it with
   `get_event` in the same run.
 - Never run git yourself and never touch the memory folder's `state/`, `.claude/`,

@@ -37,7 +37,7 @@ Each routine needs:
 |---|---|
 | Repository | `pcheek/calendar-manager-memory` **only**. With more than one repo, the hook in `.claude/settings.json` doesn't load. |
 | Environment | The one with the calendar-manager variables and setup script (below) |
-| Connectors | Gmail and Google Calendar only. Remove every other connector. |
+| Connectors | Paul's **Gmail**, for his invites and offered times. The calendar comes through the org connector, signed in as riley@cheek.org, so every write shows as created by Riley. Paul's own Google Calendar connector is optional: the guard blocks writes through it. Remove every other connector. |
 | Prompt | `/calendar-run daily` or `/calendar-run weekly` |
 | Schedule | The cron above |
 
@@ -46,8 +46,13 @@ Environment variables (in `.env` format, in the environment's settings):
 ```
 CALENDAR_MANAGER_HOME=/home/user/calendar-manager-memory
 CALENDAR_MANAGER_CONFIG=/root/.calendar-manager/config.json
-CALENDAR_MANAGER_CONFIG_JSON={"owner_emails":["paul@cheek.org","pcheek@mit.edu"],"owner_calendars":["primary"],"callie_email":"calliemcheek@gmail.com","travel_color_ids":["1"],"home_timezone":"America/New_York"}
+CALENDAR_MANAGER_CONFIG_JSON={"owner_emails":["paul@cheek.org","pcheek@mit.edu"],"owner_calendars":["primary"],"callie_email":"calliemcheek@gmail.com","travel_color_ids":["1"],"home_timezone":"America/New_York","calendar_id":"paul@cheek.org","writer_servers":["org-connector-google_calendar"],"agent_identity":"riley@cheek.org"}
 ```
+
+**Writes come from riley@cheek.org.** Paul shares `paul@cheek.org` with `riley@cheek.org`
+(Google Calendar, then Settings, then Share with specific people, then **Make changes to
+events**). The last three config keys route every write through Riley's connector to
+Paul's calendar by explicit id, so events show Paul as organizer and Riley as creator.
 
 The setup script writes `$CALENDAR_MANAGER_CONFIG` from `$CALENDAR_MANAGER_CONFIG_JSON`,
 outside the repo. The guard also reads the variable directly, so an edit to it takes
