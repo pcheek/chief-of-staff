@@ -9,7 +9,9 @@ any timed event written without an explicit UTC offset.
 His location timeline comes from the calendar, checked in this order:
 
 1. **An all-day `Travel: <city>` event covering the date.** The zone is the `Time zone:` line
-   in its description. If the description has none, use `tz.py zone-of "<city>"`.
+   in its description. If the description has none, use `tz.py zone-of "<city>"`. Paul's own
+   all-day `Paul in <city>` or `<city> trip` markers count the same way (until
+   travel-planner adds the `Travel:` event).
 2. **A flight, train or bus that day.** He's in the departure zone before it and the arrival
    zone after it.
 3. **Otherwise**, home: America/New_York.
@@ -32,6 +34,14 @@ zone moves every event that day.
 - **Personal rules follow Paul, in his local zone.** Deep work first thing, lunch, back-to-back
   meetings, no orphan gaps, and the no-meetings-before-7am / after-8pm comfort window all
   apply in wherever he is that day.
+- **Working location follows him.** Google's working location says where he is: the trip
+  city for every stretch of every day away (same time zone or not), the venue between the
+  drive in and the drive out on in-person Boston days, `Home` otherwise. travel-planner owns
+  away days; commute-planner owns Boston days.
+- **Out of office in other time zones.** When his zone is on a different clock from Boston,
+  every hour outside 7am to 8pm local is a Google out-of-office entry, one per night, built
+  with `presence.py ooo`. These never decline anything (Paul's choice): meetings that land
+  in them stay, and get flagged for Paul. Same-clock trips (Miami, Toronto) get none.
 - **Boston-only rules apply only at home:** the MIT commute, dinner at 6pm with Kyla and Cora,
   Friday WFH, in-person 1:1s, and the Tuesday-to-Thursday 1-2pm booking windows. While he's
   away, skip them.

@@ -31,8 +31,9 @@ enough for him to fix.
    is 5am in Tokyo.
 7. **Zone-blind travel gaps.** For back-to-back events in different zones (a flight, then a
    meeting), compare them in UTC, not wall-clock time.
-8. **OOO**: events with guests during red out-of-office time. Paul has to decline these
-   himself.
+8. **OOO**: events with guests during red out-of-office time, or inside a Google
+   out-of-office entry (the `OOO: <city> night` entries that cover 8pm to 7am local abroad).
+   Those entries never decline anything, so Paul has to decide these himself.
 
 - Never flag, note or propose anything about lunch. Paul doesn't want lunch checked.
 
@@ -57,7 +58,7 @@ Read, in order:
 3. `questions.md` in the same folder. Don't re-ask an open question; work under its
    default.
 
-The orchestrator passes in the mode (`daily` or `weekly`), the date window, Paul's
+The orchestrator passes in the mode (`daily`, `weekly` or `quarter`), the date window, Paul's
 **location timeline** (the IANA zone he's in for each day of the window, with Boston as the
 default), and whether this is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
 

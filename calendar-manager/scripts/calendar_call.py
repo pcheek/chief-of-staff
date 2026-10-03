@@ -11,6 +11,10 @@ before it is sent.
         --end "2026-10-05 09:00" --summary "HOLD: offered to Bob Toohey" --color 11 --busy
     calendar_call.py create --all-day --start 2026-10-11 --end 2026-10-12 --summary "NOTE: ..." \
         --color 11 --free
+    calendar_call.py create --zone Asia/Singapore --start "2026-10-12 07:00" \
+        --end "2026-10-12 20:00" --summary Singapore --working-location Singapore
+    calendar_call.py create --zone Asia/Singapore --start "2026-10-12 20:00" \
+        --end "2026-10-13 07:00" --summary "OOO: Singapore night (8pm to 7am local)" --ooo
     calendar_call.py times  --zone America/New_York --start "2026-10-05 08:30" --end "2026-10-05 09:00"
     calendar_call.py check  '<the JSON you are about to send>'      (or: check --file x.json)
 
@@ -83,7 +87,34 @@ def cmd_times(args, cfg):
     print(json.dumps(out))
 
 
+def special(args):
+    """--working-location / --ooo: Google's typed entries, which take fewer fields."""
+    if args.working_location and args.ooo:
+        raise Refused("an entry is either a working location or out of office, not both.")
+    if not (args.working_location or args.ooo):
+        return None
+    extra = [n for n, v in (("--color", args.color), ("--busy/--free", args.busy or args.free),
+                            ("--description", args.description), ("--location", args.location))
+             if v]
+    if extra:
+        raise Refused("%s can't go on a working-location or out-of-office entry." % ", ".join(extra))
+    if args.ooo:
+        if args.all_day:
+            raise Refused("out-of-office entries can't be all-day; give the timed window.")
+        # No description or notificationLevel: the API refuses an OOO create carrying them.
+        # Google makes these autoDeclineMode declineNone: they never decline anything.
+        return {"eventType": "OUT_OF_OFFICE"}
+    label = args.working_location.strip()
+    if label.lower() == "home":
+        props = {"type": "HOME_OFFICE"}
+    else:
+        props = {"type": "CUSTOM_LOCATION", "customLocationLabel": label}
+    return {"eventType": "WORKING_LOCATION", "workingLocationProperties": props,
+            "availability": "AVAILABILITY_FREE", "visibility": "public"}
+
+
 def cmd_create(args, cfg):
+    typed = special(args)
     body = {"calendarId": calendar_id(cfg), "summary": args.summary}
     if args.all_day:
         for v in (args.start, args.end):
@@ -102,7 +133,10 @@ def cmd_create(args, cfg):
         body["description"] = args.description
     if args.location:
         body["location"] = args.location
-    body["notificationLevel"] = "NONE"
+    if typed:
+        body.update(typed)
+    else:
+        body["notificationLevel"] = "NONE"
     problems = check_input(body, cfg)
     if problems:
         raise Refused("; ".join(problems))
@@ -185,6 +219,10 @@ def main(argv=None):
             g.add_argument("--free", action="store_true")
             p.add_argument("--description")
             p.add_argument("--location")
+            p.add_argument("--working-location", metavar="LABEL",
+                           help="a Google working-location entry for LABEL (Home, MIT, a city)")
+            p.add_argument("--ooo", action="store_true",
+                           help="a Google out-of-office entry (never declines)")
     p = sub.add_parser("check")
     p.add_argument("json", nargs="?")
     p.add_argument("--file")

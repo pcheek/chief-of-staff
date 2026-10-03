@@ -212,6 +212,25 @@ class GuardTest(unittest.TestCase):
             "startTime": "2026-10-02T08:00:00-04:00", "endTime": "2026-10-02T09:00:00-04:00"}),
             "allow")
 
+    def test_working_location_and_ooo_creates(self):
+        self.guard_session()
+        wl = {"summary": "MIT", "eventType": "WORKING_LOCATION",
+              "workingLocationProperties": {"type": "CUSTOM_LOCATION", "customLocationLabel": "MIT"},
+              "startTime": "2026-10-02T07:00:00-04:00", "endTime": "2026-10-02T15:00:00-04:00"}
+        self.assertEqual(self.pre(CAL + "create_event", wl), "allow")
+        self.assertEqual(self.pre(CAL + "create_event", dict(wl, workingLocationProperties=None)),
+                         "deny")
+        self.assertEqual(self.pre(CAL + "create_event", dict(
+            wl, attendees=[{"email": "calliemcheek@gmail.com"}])), "deny")
+        ooo = {"summary": "OOO: Singapore night", "eventType": "OUT_OF_OFFICE",
+               "startTime": "2026-10-11T20:00:00+08:00", "endTime": "2026-10-12T07:00:00+08:00"}
+        self.assertEqual(self.pre(CAL + "create_event", ooo), "allow")
+        self.assertEqual(self.pre(CAL + "create_event", dict(
+            ooo, endTime="2026-10-18T07:00:00+08:00")), "deny")  # a whole trip, not one night
+        self.assertEqual(self.pre(CAL + "create_event", dict(
+            ooo, allDay=True, startTime="2026-10-11", endTime="2026-10-12")), "deny")
+        self.assertEqual(self.pre(CAL + "create_event", dict(ooo, eventType="FOCUS_TIME")), "deny")
+
     def test_create_with_guest_denied(self):
         self.guard_session()
         self.assertEqual(self.pre(CAL + "create_event", {
