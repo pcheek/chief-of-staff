@@ -270,8 +270,14 @@ def check_config():
 
 
 def cmd_where(args, data):
+    # The guard keeps the config file itself off limits, so print the routing agents need:
+    # which calendar to write to and through whose connector. None of it is secret.
+    cfg = cm_paths.load_config(CONFIG, {})
+    routing = {k: cfg.get(k) for k in ("calendar_id", "agent_identity", "writer_servers",
+                                       "home_timezone") if cfg.get(k)}
     print(json.dumps({"home": HOME, "state": STATE, "config": CONFIG,
                       "config_from_env": bool(os.environ.get("CALENDAR_MANAGER_CONFIG_JSON")),
+                      "routing": routing,
                       "guidance": os.path.join(HOME, "guidance.md"),
                       "questions": os.path.join(HOME, "questions.md"),
                       "runs": os.path.join(HOME, "runs"), "git_repo": is_repo()}, indent=1))

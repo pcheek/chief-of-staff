@@ -1,6 +1,6 @@
 {
   "name": "calendar-manager",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Eight agents run Paul's calendar SOP from cloud routines: conflicts, commute and travel blocks, Legend colors, notes, 1:1s, invites missing from his calendar, holds on times he offers by email, and working location and out-of-office that follow him around the world, all time-zone strict. Writes come from riley@cheek.org; they learn from Paul's answers in a private memory repo. A hook blocks deletes, invites (Callie on travel excepted), RSVPs, messages, force-pushes and any edit to the past.",
   "author": {
     "name": "Paul Cheek",
