@@ -57,6 +57,10 @@ retries when another run pushed first and never force-pushes.
    - `approved`: do it as proposed. `revise`: do what `choice.note` says. Both within the
      guardrails, through the same tools and agents as any other change (working locations
      through `scripts/working_location.py`).
+   - An item with `ops` (the exact tool inputs) is applied by running `calendar_call.py check`
+     on them and passing them unchanged. A revision builds new ones with `calendar_call.py`.
+   - A guard denial for a missing UTC offset is a formatting error, not a policy refusal: rebuild
+     that call with `calendar_call.py` and send it once more. Every other denial is final.
    - Question items (`kind: "question"`): record the answer with `G answer` (the default
      for `approved`, `choice.note` for `revise`), then `G sync push`.
    - `choice.makeRule`: also record a standing rule with `G add-rule`.
@@ -96,7 +100,9 @@ retries when another run pushed first and never force-pushes.
    gap, "for you" action and open question to the page's `items` collection (fields:
    `order`, `runId`, `category`, `kind` calendar|you|question, `agent`, `title`, `when` in
    Paul's local time, `proposal`, `why`, `confidence` 0-100, `status: "open"`,
-   `choice: null`, `eventIds`). Skip any that is already open there. Record what this run
+   `choice: null`, `eventIds`, and for calendar changes `ops`: the exact create/update
+   inputs, built with `calendar_call.py` so every time carries its offset). Skip any that is
+   already open there. Record what this run
    did on its own as `status: "applied"` items, so the page is the full record.
 8. **Reply to Paul.** This message is all he sees. Every time in it goes through
    `tz.py show <iso> --local <his zone that day>`, which gives local time with Boston in

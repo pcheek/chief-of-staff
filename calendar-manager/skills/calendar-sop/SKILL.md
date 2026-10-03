@@ -73,6 +73,8 @@ which zone he's in. `references/timezones.md` has the location timeline, the rul
 The short version:
 - Every time written to the calendar carries an explicit UTC offset. The guard rejects
   anything else.
+  Build every calendar call with `scripts/calendar_call.py` (`create`, `times`) and check
+  anything hand-assembled with `calendar_call.py check`. Nobody types a time into a tool call.
 - "Morning", "lunch", "7am" and "6pm" mean local time wherever he is.
 - Commute, family dinner, Friday WFH and in-person 1:1s apply only when he's in Boston.
 - Every time shown to Paul is in his local zone, with Boston in parentheses.

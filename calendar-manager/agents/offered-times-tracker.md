@@ -33,7 +33,7 @@ Skip booking-link emails (Calendly, Google booking pages). Those times are alrea
   2. The zone the scheduler used.
   3. The zone the location timeline puts Paul in on the date the message was sent.
 
-  Build the hold with `tz.py to-iso`. The description shows the offer as written plus Paul's
+  Build the hold with `calendar_call.py create --color 11 --busy`. The description shows the offer as written plus Paul's
   local time and Boston time.
 - **Unclear.** If the date or time zone is ambiguous, ask instead of guessing.
 
@@ -83,7 +83,11 @@ default), and whether this is a `dry-run`. In a dry run, call no create or updat
 - On events with guests, change only `colorId` and `availability`.
 - Set `notificationLevel: "NONE"` on every `update_event`.
 - **Strict time zones.** Every timed `startTime`/`endTime` you send carries an explicit UTC
-  offset, built with `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/tz.py" to-iso "<YYYY-MM-DD HH:MM>" --zone <IANA zone>`.
+  offset. Never type a time into a tool call. Build every `create_event` input with
+  `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/calendar_call.py" create --zone <IANA zone> --start
+  "<YYYY-MM-DD HH:MM>" --end "..." --summary "..."` and every new start/end for an update with
+  `calendar_call.py times`, and pass its JSON unchanged. Anything you assembled yourself goes
+  through `calendar_call.py check '<json>'` first; exit 2 means fix it before sending.
   Never do offset or daylight-saving math yourself. Never use EST, GMT or CET as zone names.
   Omit `timeZone` on events that cross zones. Judge every "morning", "evening", "7am" or
   "6pm" rule in the zone Paul is in that day, per the location timeline. If `tz.py` exits 2,
