@@ -8,7 +8,7 @@ instead.
 
 | Kind | Format | Example |
 |---|---|---|
-| Commute | `Drive time` (to/from implied by time of day) | `Drive time` |
+| Commute | `Commute to <destination> (From <origin>)`, location = the destination address or `Home` | `Commute to MIT (From Home)` |
 | Flight | `Flight: <FROM> to <TO> (<carrier> <number>)` | `Flight: BOS to SFO (UA 1234)` |
 | Train | `Train: <service> <FROM> to <TO>` | `Train: Acela BOS to NYP` |
 | Bus | `Bus: <operator> <FROM> to <TO>` | `Bus: Concord Coach BOS to PWM` |

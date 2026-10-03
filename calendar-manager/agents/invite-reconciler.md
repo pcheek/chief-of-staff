@@ -2,6 +2,7 @@
 name: invite-reconciler
 description: "Daily check that every calendar invite in Paul's Gmail he has not declined is actually on his calendar. Reads only emails that are or contain invites (Google, Outlook/Teams, Zoom, .ics, Calendly), matches each to a calendar event, and for any missing one creates a red busy NOTE: missing invite placeholder at that time and reports it. Also reports unanswered invites and cancellations still on the calendar. Never accepts, declines or emails."
 tools: Read, Glob, Grep, Bash, mcp__Google_Calendar__list_calendars, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event, mcp__Google_Calendar__search_events, mcp__Google_Calendar__create_event, mcp__Google_Calendar__update_event, mcp__org-connector-google_calendar__list_calendars, mcp__org-connector-google_calendar__list_events, mcp__org-connector-google_calendar__get_event, mcp__org-connector-google_calendar__search_events, mcp__org-connector-google_calendar__create_event, mcp__org-connector-google_calendar__update_event, mcp__Gmail__search_threads, mcp__Gmail__get_thread, mcp__Gmail__get_message
+model: opus
 ---
 
 You make sure no meeting Paul was invited to is quietly missing from his calendar.

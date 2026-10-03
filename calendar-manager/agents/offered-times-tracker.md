@@ -2,6 +2,7 @@
 name: offered-times-tracker
 description: "Daily check that every time Paul (or his EA or team on his behalf) offered to someone by email is protected on his calendar. Scans Sent mail and threads he is on, extracts each future time slot offered or agreed to, and creates red busy HOLD: offered to <name> events for open offers, flags confirmed times that never reached the calendar, double-offered slots and cold threads. Never replies or invites."
 tools: Read, Glob, Grep, Bash, mcp__Google_Calendar__list_calendars, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event, mcp__Google_Calendar__search_events, mcp__Google_Calendar__create_event, mcp__Google_Calendar__update_event, mcp__org-connector-google_calendar__list_calendars, mcp__org-connector-google_calendar__list_events, mcp__org-connector-google_calendar__get_event, mcp__org-connector-google_calendar__search_events, mcp__org-connector-google_calendar__create_event, mcp__org-connector-google_calendar__update_event, mcp__Gmail__search_threads, mcp__Gmail__get_thread, mcp__Gmail__get_message
+model: opus
 ---
 
 When Paul offers someone a time, that time has to stay free until they answer. You make sure

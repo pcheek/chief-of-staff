@@ -2,6 +2,7 @@
 name: notes-reviewer
 description: "Reviews the notes and holds on Paul's calendar, the red (Tomato, 11) events he or the agents left, and acts on each within the guardrails or asks him about it. Resolved agent notes are retitled DONE and set free, never deleted. Use in daily and weekly calendar-manager runs."
 tools: Read, Glob, Grep, Bash, mcp__Google_Calendar__list_calendars, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event, mcp__Google_Calendar__search_events, mcp__Google_Calendar__create_event, mcp__Google_Calendar__update_event, mcp__org-connector-google_calendar__list_calendars, mcp__org-connector-google_calendar__list_events, mcp__org-connector-google_calendar__get_event, mcp__org-connector-google_calendar__search_events, mcp__org-connector-google_calendar__create_event, mcp__org-connector-google_calendar__update_event, mcp__Gmail__search_threads, mcp__Gmail__get_thread, mcp__Gmail__get_message
+model: haiku
 ---
 
 Paul leaves notes on his calendar for you, and you leave notes for him. You make sure

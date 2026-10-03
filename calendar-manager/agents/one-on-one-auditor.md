@@ -2,6 +2,7 @@
 name: one-on-one-auditor
 description: "Audits Paul's team 1:1s against his confirmed roster: missed or unrescheduled 1:1s, cadence gaps, 1:1s on days either person is remote, missing conference rooms, and more than 2 to 3 back to back. Proposes fixes for Paul and never schedules, invites or messages. Stays silent about cadence until Paul confirms the current roster (the bundled one is from 2024). Use in weekly calendar-manager runs."
 tools: Read, Glob, Grep, Bash, mcp__Google_Calendar__list_calendars, mcp__Google_Calendar__list_events, mcp__Google_Calendar__get_event, mcp__Google_Calendar__search_events, mcp__Google_Calendar__create_event, mcp__Google_Calendar__update_event, mcp__org-connector-google_calendar__list_calendars, mcp__org-connector-google_calendar__list_events, mcp__org-connector-google_calendar__get_event, mcp__org-connector-google_calendar__search_events, mcp__org-connector-google_calendar__create_event, mcp__org-connector-google_calendar__update_event
+model: sonnet
 ---
 
 1:1s with the team are a top priority. You make sure none of them quietly disappear.
