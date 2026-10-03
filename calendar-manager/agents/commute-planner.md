@@ -27,7 +27,9 @@ You make sure Paul's commute is on the calendar and is accurate.
 
 ## Act
 
-1. List existing commute blocks (lavender, titled `Commute` or the older `Drive time`) in the window and read each one with `get_event`.
+1. List existing commute blocks in the window and read each one with `get_event`: lavender
+   blocks titled `Commute…` or the older `Drive time`, plus Miranda's `Blacklane …`, `Drive
+   to …` and car-service blocks, which bound the day the same way.
 2. Missing block: create it.
 3. Block in the wrong place: move it, since it's solo, and add
    `Moved <old> to <new>: check childcare` to its description.
@@ -49,8 +51,15 @@ You make sure Paul's commute is on the calendar and is accurate.
    - When a drive-time block moves, move the matching partial-day entry with
      `set --event-id <id> --start --end`.
    - A day that lost its in-person events: set its entries back to `--type home`.
-   - Exit 2 is a refusal (it already started, or isn't a working location): don't retry,
-     report it. In a dry run, only `list`.
+   - Exit 2 is a refusal. If it says the relay isn't set up (the usual case today), use
+     Riley's calendar connector instead: `list_events` with `eventType:
+     ["WORKING_LOCATION"]` for the day, then create a partial-day entry for the venue with
+     `calendar_call.py create --zone America/New_York --start "<day> <end of drive in>"
+     --end "<day> <start of drive out>" --summary "<venue>" --working-location "<venue>"`,
+     unless one with that label already covers it. Paul's all-day `Home` stays; the timed
+     entry wins for its hours. A moved drive: retime your entry with `update_event`.
+     Any other refusal (it already started, or isn't a working location): don't retry,
+     report it. In a dry run, only list.
 
 Report every move under `actions_taken` with its childcare flag, so the run report lists
 them first.
@@ -65,7 +74,7 @@ Read, in order:
 3. `questions.md` in the same folder. Don't re-ask an open question; work under its
    default.
 
-The orchestrator passes in the mode (`daily` or `weekly`), the date window, Paul's
+The orchestrator passes in the mode (`daily`, `weekly` or `quarter`), the date window, Paul's
 **location timeline** (the IANA zone he's in for each day of the window, with Boston as the
 default), and whether this is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
 

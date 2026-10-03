@@ -50,7 +50,7 @@ Read, in order:
 3. `questions.md` in the same folder. Don't re-ask an open question; work under its
    default.
 
-The orchestrator passes in the mode (`daily` or `weekly`), the date window, Paul's
+The orchestrator passes in the mode (`daily`, `weekly` or `quarter`), the date window, Paul's
 **location timeline** (the IANA zone he's in for each day of the window, with Boston as the
 default), and whether this is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
 

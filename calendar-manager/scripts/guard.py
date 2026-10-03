@@ -367,6 +367,37 @@ def check_writer(server, cfg):
                                                   cfg["calendar_id"] or "primary"))
 
 
+CREATE_TYPES = {"", "EVENT_TYPE_UNSPECIFIED", "DEFAULT", "WORKING_LOCATION", "OUT_OF_OFFICE"}
+OOO_MAX = 14 * 3600  # one night outside 7am to 8pm local is 11 hours; never a whole trip
+
+
+def check_event_type(tool_input):
+    """Working-location and out-of-office entries are Paul's alone: no guests, timed OOO only.
+
+    Riley's connector creates OOO with autoDeclineMode declineNone (verified 2026-10-03), so
+    an OOO entry never declines anything; the agents still never RSVP."""
+    kind = str(tool_input.get("eventType") or "").upper()
+    if kind not in CREATE_TYPES:
+        deny("eventType %s is not allowed; agents create regular events, working locations "
+             "and out-of-office entries only." % kind)
+    if kind not in ("WORKING_LOCATION", "OUT_OF_OFFICE"):
+        return
+    if guest_emails(tool_input.get("attendees")) or guest_emails(tool_input.get("attendeeEmails")):
+        deny("working-location and out-of-office entries never have guests, Callie included.")
+    if kind == "WORKING_LOCATION" and not tool_input.get("workingLocationProperties"):
+        deny("a working-location entry needs workingLocationProperties (build it with "
+             "calendar_call.py create --working-location <label>).")
+    if kind == "OUT_OF_OFFICE":
+        if tool_input.get("allDay"):
+            deny("out-of-office entries are timed, never all-day.")
+        span = minutes_between(tool_input.get("startTime"), tool_input.get("endTime"))
+        if span is None:
+            deny("out-of-office entries need timed startTime and endTime with offsets.")
+        if span * 60 > OOO_MAX:
+            deny("an out-of-office entry covers one night (at most 14 hours); build them with "
+                 "presence.py ooo.")
+
+
 def check_create(tool_input, cfg):
     check_calendar_id(tool_input, cfg)
     if not tool_input.get("startTime") or not tool_input.get("endTime"):
@@ -377,6 +408,7 @@ def check_create(tool_input, cfg):
     if tool_input.get("addGoogleMeetUrl") or tool_input.get("googleMeetUrl") \
             or tool_input.get("conferenceData"):
         deny("no Google Meet links. Paul is Zoom-only and Meet implies guests.")
+    check_event_type(tool_input)
     guests = others(guest_emails(tool_input.get("attendees"))
                     + guest_emails(tool_input.get("attendeeEmails")), cfg)
     if not guests:

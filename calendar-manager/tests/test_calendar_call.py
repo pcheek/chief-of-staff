@@ -113,5 +113,28 @@ class CalendarCallTest(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+    def test_working_location_and_ooo(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            cc.main(["create", "--zone", "Asia/Singapore", "--start", "2026-10-12 07:00",
+                     "--end", "2026-10-12 20:00", "--summary", "Singapore",
+                     "--working-location", "Singapore"])
+        body = json.loads(out.getvalue())
+        self.assertEqual(body["eventType"], "WORKING_LOCATION")
+        self.assertEqual(body["workingLocationProperties"]["customLocationLabel"], "Singapore")
+        self.assertEqual(body["startTime"], "2026-10-12T07:00:00+08:00")
+        self.assertNotIn("notificationLevel", body)
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            cc.main(["create", "--zone", "Asia/Singapore", "--start", "2026-10-12 20:00",
+                     "--end", "2026-10-13 07:00", "--summary", "OOO", "--ooo"])
+        body = json.loads(out.getvalue())
+        self.assertEqual(body["eventType"], "OUT_OF_OFFICE")
+        self.assertNotIn("description", body)
+        self.assertNotIn("notificationLevel", body)
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(cc.main(["create", "--zone", "Asia/Singapore", "--start",
+                                      "2026-10-12 20:00", "--end", "2026-10-13 07:00",
+                                      "--summary", "OOO", "--ooo", "--description", "x"]), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

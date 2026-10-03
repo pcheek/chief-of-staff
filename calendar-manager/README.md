@@ -9,7 +9,8 @@ remember the answer.
 1. Two **cloud routines** on claude.ai/code fire the run whether or not Paul's Mac is on:
    weekdays at 7:52am and Sundays at 4:52pm, Boston time. Each starts a fresh session on
    the private memory repo `pcheek/calendar-manager-memory`. A desktop scheduled task is
-   the fallback. `/calendar-manager:schedule` covers both.
+   the fallback. `/calendar-manager:schedule` covers both. A third routine, **Calendar
+   quarter**, has no schedule: fire it with Run now to set up the next 90 days at once.
 2. The run pulls the memory repo and loads the SOP (`skills/calendar-sop`), the promoted
    rules (`learned.md`) and Paul's newest answers (`guidance.md` in the memory repo). Then
    it dispatches:
@@ -17,8 +18,8 @@ remember the answer.
    | Agent | Job |
    |---|---|
    | `conflict-scanner` | Overlaps, tight travel, overscheduling, 6pm dinner, OOO. Writes red `NOTE:` events. |
-   | `commute-planner` | 1-hour drive-time blocks (15 minutes off-peak). Moves them and flags childcare. |
-   | `travel-planner` | `Travel:` all-day events, exact-time flights, trains and buses, airport transit, landing buffers, Callie invites. |
+   | `commute-planner` | 1-hour drive-time blocks (15 minutes off-peak). Moves them and flags childcare. Working location = the venue between the drive in and the drive out. |
+   | `travel-planner` | `Travel:` all-day events, exact-time flights, trains and buses, airport transit, landing buffers, Callie invites. Working location = the trip city; in other time zones, out-of-office (never declining) outside 7am to 8pm local. Looks 90 days ahead on weekly runs. |
    | `categorizer` | Color categories, free/busy, title formats, reminders. |
    | `notes-reviewer` | Acts on Paul's notes and holds; closes out its own resolved notes. |
    | `one-on-one-auditor` | 1:1 cadence against the confirmed roster (weekly only). |

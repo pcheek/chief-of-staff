@@ -1,6 +1,6 @@
 ---
 name: run
-description: "Scheduled-task entry point for calendar-manager. Invoke as /calendar-manager:run daily, /calendar-manager:run weekly, or add dry-run to report without changing the calendar. Pulls the memory repo, loads Paul's calendar SOP and learned guidance, dispatches the calendar agents (conflict scanner, commute planner, travel planner, categorizer, notes reviewer, and weekly the 1:1 auditor), merges their questions, writes a run report, commits and pushes it to the memory repo, and ends by asking Paul the open questions in this session. When Paul replies, record his answers with the guidance skill so the agents learn."
+description: "Scheduled-task entry point for calendar-manager. Invoke as /calendar-manager:run daily, /calendar-manager:run weekly, /calendar-manager:run quarter (a one-off pass over the next 90 days), or add dry-run to report without changing the calendar. Pulls the memory repo, loads Paul's calendar SOP and learned guidance, dispatches the calendar agents (conflict scanner, commute planner, travel planner, categorizer, notes reviewer, and weekly the 1:1 auditor), merges their questions, writes a run report, commits and pushes it to the memory repo, and ends by asking Paul the open questions in this session. When Paul replies, record his answers with the guidance skill so the agents learn."
 ---
 
 # calendar-manager run
@@ -18,7 +18,20 @@ retries when another run pushed first and never force-pushes.
 
 `G` = `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/guidance.py"`
 
-`$ARGUMENTS`: `daily` (the default) or `weekly`, optionally with `dry-run`.
+`$ARGUMENTS`: `daily` (the default), `weekly` or `quarter`, optionally with `dry-run`.
+
+**Windows.** Every agent gets the **window**; travel-planner also gets the **travel window**,
+because trips are booked months ahead.
+
+| Mode | Window | Travel window |
+|---|---|---|
+| `daily` | now plus 48 hours | same as the window |
+| `weekly` | today through the end of the week after next | today plus 90 days |
+| `quarter` | today plus 90 days | today plus 90 days |
+
+`quarter` is the one-off Paul fires by hand (the "Calendar quarter" routine) to set up the
+next three months at once. It runs every agent except `one-on-one-auditor` (a weekly
+cadence check). Its report can be long: lead with counts per agent.
 
 ## Steps
 
@@ -42,10 +55,15 @@ retries when another run pushed first and never force-pushes.
      Never use the org Gmail connector, which is Riley's mailbox.
 2. **Load context.** Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/SKILL.md`, then
    `guidance.md` and `questions.md` in the memory folder.
-3. **Build the location timeline** for the window (`references/timezones.md`).
-   - List all-day `Travel:` events and flights, trains and buses covering the window.
-   - For each date, record Paul's IANA zone: the `Time zone:` line, or
-     `tz.py zone-of "<city>"`. Default to America/New_York.
+3. **Build the location timeline** for the travel window, the longer of the two
+   (`references/timezones.md`).
+   - List all-day `Travel:` events, Paul's own `Paul in <city>` / `<city> trip` markers, and
+     flights, trains and buses covering the window.
+   - For each date, record Paul's IANA zone (the `Time zone:` line, or
+     `tz.py zone-of "<city>"`; default America/New_York) and the city name.
+   - For each trip, record when he lands (plus the landing buffer) and when he leaves for
+     the airport, as ISO times with offsets. travel-planner uses them for working location
+     and out of office.
    - Note which days have a mid-day zone change (a travel day).
    - Re-read the current time in today's zone (`tz.py now --zone <zone>`). Windows like "the
      next 48 hours" and "today" are measured in that zone.
@@ -66,13 +84,13 @@ retries when another run pushed first and never force-pushes.
    - `choice.makeRule`: also record a standing rule with `G add-rule`.
    - Then set the item's `status` to `applied`, or `failed` with `applied.result` saying
      why. Never delete an item or the `log` collection. In a dry run, apply nothing.
-4. **Dispatch agents** with the Agent tool. Give each one the mode, the window (daily: now
-   plus 48 hours; weekly: today through the end of the week after next), `dry-run` if set,
-   the current date, and the location timeline.
+4. **Dispatch agents** with the Agent tool. Give each one the mode, the window (see
+   **Windows** above), `dry-run` if set, the current date, and the location timeline.
+   travel-planner also gets the travel window.
    - **First, in parallel:** `invite-reconciler` and `offered-times-tracker`. Both look at
      14 days of Gmail, whatever the mode.
    - **Then, in parallel:** `conflict-scanner`, `commute-planner`, `travel-planner`,
-     `categorizer`, `notes-reviewer`. Weekly runs also get `one-on-one-auditor`. Running
+     `categorizer`, `notes-reviewer`. Weekly runs (not quarter) also get `one-on-one-auditor`. Running
      these second means they see the new placeholders and holds.
 
    Agents that write the same events run in this order instead: travel-planner, then

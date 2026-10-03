@@ -11,6 +11,12 @@ description: "Sets up the schedules that run calendar-manager: by default two cl
 |---|---|---|
 | Calendar daily | `/calendar-manager:run daily` | Weekdays 7:52am: `CRON_TZ=America/New_York 52 7 * * 1-5` |
 | Calendar weekly | `/calendar-manager:run weekly` | Sundays 4:52pm: `CRON_TZ=America/New_York 52 16 * * 0` |
+| Calendar quarter | `/calendar-manager:run quarter` | No schedule: Paul fires it with **Run now** whenever he wants the next 90 days set up |
+
+The weekly run also sends travel-planner 90 days ahead (working location, out-of-office
+nights and travel blocks for trips booked months out). The quarter routine is the same
+setup as the others (memory repo, Gmail and Google Calendar connectors, same environment),
+with no cron.
 
 - **Boston time.** Times are Boston time, so daylight-saving changes are handled.
 - **While Paul travels,** the daily run still fires at 7:52am Boston, which can land in the

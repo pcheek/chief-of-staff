@@ -180,6 +180,11 @@ Google Calendar's working location always matches the commute blocks (local time
 
 - OOO is red. Meetings during OOO should be declined, but you can't decline, so make a red
   note listing them and ask Paul.
+- In another time zone, every hour outside 7am to 8pm local is a Google out-of-office
+  entry (`OOO: <city> night (8pm to 7am local)`), which never declines anything. Meetings
+  inside one stay as they are and get flagged for Paul. See `references/timezones.md`.
+- Working location follows Paul: the trip city when he's away, the venue between commutes
+  on in-person Boston days, Home otherwise.
 - WFH is marked on the calendar, and meetings stay as they are.
 
 ## Notifications
