@@ -650,6 +650,10 @@ def check_bash(command, cwd):
         if re.sub(r"[\d.]+$", "", prog) in INTERPRETERS and \
                 any(a in INLINE_FLAGS for a in argv[1:]):
             inline = " ".join(argv)
+            # Claude Code keeps tool results and transcripts under the user's ~/.claude/; a
+            # script reading one of those isn't touching the memory repo's .claude/.
+            for home_claude in {os.path.join(os.path.expanduser("~"), ".claude") + "/", "~/.claude/"}:
+                inline = inline.replace(home_claude, "~home-claude~/")
             names = (".gitignore", ".gitattributes", ".claude", "guard.py", "hooks.json")
             if any(form in inline for p in code for form in path_forms(p)) or \
                     any(n in inline for n in names):

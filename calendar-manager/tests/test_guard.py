@@ -116,6 +116,15 @@ class GuardTest(unittest.TestCase):
     def bash(self, command, cwd=None):
         return self.pre("Bash", {"command": command}, cwd=cwd or self.tmp.name)
 
+    def test_inline_code_reading_tool_results_allowed(self):
+        self.guard_session()
+        home = os.path.expanduser("~")
+        tool_result = home + "/.claude/projects/-home-user-mem/abc/tool-results/x.json"
+        self.assertEqual(self.bash("python3 -c \"import json;print(json.load(open('%s')))\""
+                                   % tool_result), "allow")
+        self.assertEqual(self.bash("python3 -c \"open('.claude/settings.json','w')\""), "deny")
+        self.assertEqual(self.bash("python3 -c \"open('guard.py').read()\""), "deny")
+
     def test_state_by_relative_path_from_memory_repo(self):
         self.guard_session()
         self.assertEqual(self.bash("echo {} > state/created_events.json"), "deny")

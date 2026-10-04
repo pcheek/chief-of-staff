@@ -71,7 +71,7 @@ new place. The promote-guidance PR is how it grows.
 |---|---|
 | Boston, Cambridge, MIT, Babson, Wellesley, New York, NYC, Washington, DC, Philadelphia, Miami, Atlanta, Toronto | America/New_York |
 | Chicago, Austin, Dallas, Houston, Minneapolis | America/Chicago |
-| Denver, Boulder, Salt Lake City | America/Denver |
+| Denver, Boulder, Salt Lake City, Santa Fe, Albuquerque, ABQ, Tamaya | America/Denver |
 | Phoenix | America/Phoenix |
 | San Francisco, SF, Palo Alto, Los Angeles, LA, Seattle, Portland OR | America/Los_Angeles |
 | Honolulu | Pacific/Honolulu |

@@ -42,6 +42,8 @@ class TzTest(unittest.TestCase):
     def test_zone_of(self):
         self.assertEqual(tz("zone-of", "Aberdeen"), (0, "Europe/London"))
         self.assertEqual(tz("zone-of", "cambridge"), (0, "America/New_York"))
+        self.assertEqual(tz("zone-of", "Santa Fe"), (0, "America/Denver"))
+        self.assertEqual(tz("zone-of", "Albuquerque"), (0, "America/Denver"))
         self.assertEqual(tz("zone-of", "Atlantis")[0], 2)
 
     def test_bad_zone_names_rejected(self):
