@@ -77,8 +77,11 @@ cadence check). Its report can be long: lead with counts per agent.
 3b. **Apply Paul's decisions** before dispatching agents, so they see the result. The
    Calendar Decisions page (its URL is in guidance.md) keeps every proposal Paul has
    decided. Read its `items` collection with the ArtifactData tool. Items Paul decided wait
-   as `status: "queued"` with `choice.action` `do` (as proposed) or `revise` (do what
-   `choice.note` says instead). Apply them within the guardrails, through the same tools
+   as `status: "queued"` with `choice.action` `do` (as proposed), `revise` (do what
+   `choice.note` says instead) or `parts`: Paul decided each part of the card on its own,
+   and `choice.parts` lists them as `{text, action, note}`. Apply each part by its own
+   action: `do` is that part as written (on a `you` card, Paul handles it: nothing for
+   Riley), `skip` is nothing, `change` is `note` instead of that part. Apply them within the guardrails, through the same tools
    and agents as any other change (working locations through `calendar_call.py create
    --working-location`, out-of-office through `presence.py ooo`).
    - **Do what you can, hand back the rest.** Split an instruction into its parts. Do every
@@ -100,6 +103,8 @@ cadence check). Its report can be long: lead with counts per agent.
    - Question items (`kind: "question"`): record the answer with `G answer` (the default
      for `do`, `choice.note` for `revise`), then `G sync push`.
    - `choice.makeRule`: also record a standing rule with `G add-rule`.
+   - Paul can leave a note on any card for future runs. It arrives as an instruction with
+     `source: "card"` (step 3c), not on the item, and never re-decides the card.
    - Never delete an item or the `log` collection. In a dry run, apply nothing.
 3c. **Apply Paul's instructions.** The page's Instruct tab writes what Paul tells the agents,
    in his own words, to its `instructions` collection. Only the page's owner can write that
@@ -115,6 +120,10 @@ cadence check). Its report can be long: lead with counts per agent.
      instruction:<id>` instead. Then `G sync push`. Set `rule_id`.
    - `kind: "one_off"`: do it once, exactly like a `revise` decision in 3b (guardrails,
      partial apply and handing back included).
+   - `source: "card"`: a note Paul left on a card, with the card in `card` (title, when,
+     proposal, agent). It's about future runs: record it as a rule scoped to `card.agent`
+     (or `all` when it's general), made specific with the card's context, and never
+     re-decide the card itself.
    - `kind: "plugin_change"`: never apply it; the page starts a build session for those.
      Leave it as it is.
    - A rule that needs a guardrail loosened, or that the agents can't follow with the tools
@@ -161,8 +170,11 @@ cadence check). Its report can be long: lead with counts per agent.
    `order`, `runId`, `category`, `kind` calendar|you|question, `agent`, `title`, `when` in
    Paul's local time, `proposal`, `why`, `confidence` 0-100, `status: "open"`,
    `choice: null`, `eventIds`, and for calendar changes `ops`: the exact create/update
-   inputs, built with `calendar_call.py` so every time carries its offset). Skip any that is
-   already open there. Record what this run
+   inputs, built with `calendar_call.py` so every time carries its offset), `dates` (every
+   day it concerns, `YYYY-MM-DD` in Paul's local time: the page links each one to that day
+   in Google Calendar), and `parts` when one card holds separate decisions Paul might answer
+   differently (`[{id, text, date}]`, each part self-contained and naming its own day and
+   event; Paul approves, skips or changes each one). Skip any that is already open there. Record what this run
    did on its own as `status: "applied"` items, so the page is the full record.
 7c. **Publish the rules.** Write the page's `config/calendar_rules` document: `{rules: [{id,
    rule, scope}], updated_at}` from `G rules --json` (active rules only). The Instruct tab
