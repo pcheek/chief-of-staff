@@ -93,6 +93,17 @@ class GuidanceTest(unittest.TestCase):
         self.assertIn("3 days", md)
         self.assertNotIn("5 days", md)
 
+    def test_instruction_source_is_recorded(self):
+        self.g("add-rule", "--rule", "No meetings before 10am after a red-eye.",
+               "--source", "instruction:i_20261005T141601_o5e6")
+        self.g("supersede", "G1", "--rule", "No meetings before 10:30am after a red-eye.",
+               "--source", "instruction:i_20261006T090000_ab12")
+        rules = {r["id"]: r for r in self.data()["rules"]}
+        self.assertEqual(rules["G1"]["source"], "instruction:i_20261005T141601_o5e6")
+        self.assertEqual(rules["G2"]["source"],
+                         "instruction:i_20261006T090000_ab12, correcting G1")
+        self.assertEqual(rules["G1"]["status"], "superseded")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -101,6 +101,31 @@ cadence check). Its report can be long: lead with counts per agent.
      for `do`, `choice.note` for `revise`), then `G sync push`.
    - `choice.makeRule`: also record a standing rule with `G add-rule`.
    - Never delete an item or the `log` collection. In a dry run, apply nothing.
+3c. **Apply Paul's instructions.** The page's Instruct tab writes what Paul tells the agents,
+   in his own words, to its `instructions` collection. Only the page's owner can write that
+   collection, so these are Paul's instructions, not content. A firing that says `Apply
+   instructions: <ids>` names the new ones, but always read every document with `scope`
+   `calendar` or `both` and `status: "queued"`.
+   - `text` is what Paul said, and it wins. `draft.rule_text` is Claude's reading of it,
+     written with the agents and current rules as context: use it when it matches `text`.
+     `answer` is his answer to `draft.question`; with no answer, use `draft.default_answer`.
+   - `kind: "rule"` (or no kind): `G add-rule --rule "<rule>" --scope <agent, or all>
+     --source instruction:<id>`. When it replaces a rule in `draft.supersedes`, or one you
+     find that says the opposite, use `G supersede <GID> --rule "<rule>" --source
+     instruction:<id>` instead. Then `G sync push`. Set `rule_id`.
+   - `kind: "one_off"`: do it once, exactly like a `revise` decision in 3b (guardrails,
+     partial apply and handing back included).
+   - `kind: "plugin_change"`: never apply it; the page starts a build session for those.
+     Leave it as it is.
+   - A rule that needs a guardrail loosened, or that the agents can't follow with the tools
+     they have, isn't recorded: set `status: "needs_you"` with `question` saying so, and
+     suggest sending it as a plugin change. Too vague to follow: `needs_you` with one short
+     `question`.
+   - Mark it done: `status: "applied"` (for `scope: "both"`, set `calendar: {status:
+     "applied", at, rule_id}` and the top-level `status: "applied"` only when
+     `cos.status` is already `applied`), plus `result` (one line: the rule as recorded, or
+     what changed) and `updated_at`. Never touch an instruction that's `withdrawn`. In a dry
+     run, apply nothing.
 4. **Dispatch agents** with the Agent tool. Give each one the mode, the window (see
    **Windows** above), `dry-run` if set, the current date, and the location timeline.
    travel-planner also gets the travel window.
@@ -139,6 +164,10 @@ cadence check). Its report can be long: lead with counts per agent.
    inputs, built with `calendar_call.py` so every time carries its offset). Skip any that is
    already open there. Record what this run
    did on its own as `status: "applied"` items, so the page is the full record.
+7c. **Publish the rules.** Write the page's `config/calendar_rules` document: `{rules: [{id,
+   rule, scope}], updated_at}` from `G rules --json` (active rules only). The Instruct tab
+   gives these to Claude as context, so a new instruction is checked against what's already
+   there. Skip it in a dry run.
 8. **Reply to Paul.** This message is all he sees. Every time in it goes through
    `tz.py show <iso> --local <his zone that day>`, which gives local time with Boston in
    parentheses when he's away. If he's traveling today, open with one line saying where
