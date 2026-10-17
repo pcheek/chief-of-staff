@@ -205,3 +205,6 @@ The private memory repo becomes `memory-manager`, with a `calendar/` folder (thi
 resolves the repo root from that marker and keeps calendar data in `<root>/calendar`. The legacy marker
 `.calendar-manager-memory` still works, with the repo root as the data folder, so nothing breaks before the
 move. `CALENDAR_MANAGER_HOME` may name either the repo root or its `calendar/` folder.
+
+To finish the move, Paul runs `python3 scripts/migrate_to_memory_manager.py <clone of the memory repo>` once, after the data-move PR on the memory repo merges. The guard blocks agents from editing the marker, `.gitattributes` and `.claude/` there, so that part is a human step by design.
+
