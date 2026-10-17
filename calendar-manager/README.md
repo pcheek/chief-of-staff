@@ -63,6 +63,18 @@ committed. So a run can edit an event's time, title or description only when it 
 event and confirmed it solo in that same run. Agent-created events from earlier runs get
 the same read-first treatment.
 
+## Instructions from the Decisions page
+
+Paul's Instruct tab (pen icon in the page header) takes an instruction in his own words.
+Claude drafts the exact rule on the page, with the agents, guardrails and current rules as
+context, and Paul sends it. It lands in the page's `instructions` collection (owner-only
+writes) and fires the apply routine with the new id. Run step 3c records a rule with
+`guidance.py add-rule --source instruction:<id>` (or `supersede`), pushes memory, and marks
+the instruction applied. Rules are memory, not code: nothing is committed to this repo.
+A plugin change goes the other way: the page starts a Claude Code session on this repo,
+which opens a draft PR for Paul to review. Each run also writes `config/calendar_rules` so
+the page can check a new instruction against the rules already there.
+
 ## Writes come from riley@cheek.org
 
 With `calendar_id`, `writer_servers` and `agent_identity` in the config (the cloud default):

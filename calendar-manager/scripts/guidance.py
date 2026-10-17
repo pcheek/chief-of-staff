@@ -22,7 +22,8 @@ private memory repo that every run pulls from and pushes to; on the desktop,
     guidance.py open [--json]                open questions
     guidance.py answer QID --answer TEXT [--rule TEXT] [--scope S]
     guidance.py add-rule --rule TEXT [--scope S] [--source TEXT]
-    guidance.py supersede GID --rule TEXT    replace a rule with a corrected one
+    guidance.py supersede GID --rule TEXT [--source TEXT]
+                                             replace a rule with a corrected one
     guidance.py rules [--json]               active rules
     guidance.py tick                         end of run: count a run against every active rule
     guidance.py candidates [--min-runs 2]    rules ready to promote into the plugin SOP
@@ -347,7 +348,8 @@ def cmd_add_rule(args, data):
 
 def cmd_supersede(args, data):
     old = find(data["rules"], args.gid)
-    new = add_rule(data, args.rule, args.scope or old["scope"], "Paul, correcting %s" % old["id"])
+    source = "%s, correcting %s" % (args.source or "Paul", old["id"])
+    new = add_rule(data, args.rule, args.scope or old["scope"], source)
     old.update(status="superseded", superseded_by=new["id"])
     save(data)
     print("%s superseded by %s" % (old["id"], new["id"]))
@@ -646,6 +648,7 @@ def main():
     p.add_argument("gid")
     p.add_argument("--rule", required=True)
     p.add_argument("--scope")
+    p.add_argument("--source")
     p = sub.add_parser("rules")
     p.add_argument("--json", action="store_true")
     sub.add_parser("tick")
