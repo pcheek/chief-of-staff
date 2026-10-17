@@ -71,6 +71,11 @@ For each trip, make sure all of these exist:
      calendar refuses an OOO create that carries them.
    - Meetings with guests inside these hours: don't touch them. List them under
      `proposed_for_paul` so Paul can decide.
+9. **Jet lag.** For every trip with an international flight (departure and arrival zones 2 hours
+   or more apart), read `${CLAUDE_PLUGIN_ROOT}/skills/jet-lag-plan/SKILL.md` and follow it end to
+   end, layovers included. It writes gray, free `Jet Lag - Sleep 😴` and `Jet Lag - Awake ☀️` blocks
+   and skips trips it already planned. Run it after the flights above exist, and again when a
+   flight time changes. In a dry run, report the blocks it would create.
 
 ## Callie
 
