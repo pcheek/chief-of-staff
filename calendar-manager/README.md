@@ -126,7 +126,7 @@ a `timeZone` that contradicts its offsets, is refused. Rules and city-to-zone ma
 
 A hook enforces these in every calendar-manager session. That covers:
 - any session whose prompt invokes `/calendar-manager:*` or `/calendar-run` and friends;
-- any session running inside the memory repo (its `.calendar-manager-memory` marker);
+- any session running inside the memory repo (its `.memory-manager` marker, or the legacy `.calendar-manager-memory`). Email sessions must not start inside it: run them in the marketplace checkout and reach the repo by path (`MEMORY_MANAGER_HOME`);
 - any of this plugin's agents.
 
 Paul's other sessions are unaffected.
@@ -197,3 +197,11 @@ python3 -m unittest discover -s calendar-manager/tests
 ```
 
 To check the guard by hand in a run: ask the run to delete a test event. The hook denies it.
+
+## memory-manager layout
+
+The private memory repo becomes `memory-manager`, with a `calendar/` folder (this plugin's data) and an
+`email/` folder (the chief of staff's). The marker `.memory-manager` sits at the repo root. `cm_paths.py`
+resolves the repo root from that marker and keeps calendar data in `<root>/calendar`. The legacy marker
+`.calendar-manager-memory` still works, with the repo root as the data folder, so nothing breaks before the
+move. `CALENDAR_MANAGER_HOME` may name either the repo root or its `calendar/` folder.
