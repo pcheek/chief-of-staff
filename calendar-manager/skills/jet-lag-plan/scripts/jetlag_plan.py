@@ -8,7 +8,6 @@ trip.json:
   "dest_tz": "Europe/London",         # final destination
   "body_tz": "America/New_York",      # the zone his clock is on now (see SKILL.md step 3)
   "wake": "06:30", "bed": "22:30",    # habitual times; same wall clock at home and away
-  "pre_days": 3,                      # days of pre-trip shifting before departure (0 to 7)
   "legs": [{"from": "BOS", "to": "LHR",
             "dep": "2026-11-02T21:55", "dep_tz": "America/New_York",
             "arr": "2026-11-03T09:45", "arr_tz": "Europe/London"}]
@@ -16,7 +15,8 @@ trip.json:
 Exits 2 with a message on bad input.
 
 Output: `events[]` is the Sleep/Awake timeline the skill writes to the calendar, in time
-order. Everything else is the evidence the descriptions are written from.
+order. It covers the flights and layovers only: no pre-trip or post-landing blocks.
+Everything else is the evidence the descriptions are written from.
 """
 import json
 import sys
@@ -37,9 +37,6 @@ LAYOVER_SLEEP_MIN_H = 6        # shorter layovers: stay awake in the terminal
 LAYOVER_PAD_H = (0.5, 1.5)     # layover sleep starts 30 min after landing, ends 90 min before departure
 MIN_SLEEP_H = 1.0              # shorter overlaps with destination night are not worth a Sleep block
 MIN_EVENT_H = 0.5              # no calendar block shorter than this
-MAX_PRE_DAYS = 7
-MAX_PRE_SHIFT_H = 3.0          # most the sleep schedule moves before takeoff; the rest happens in transit
-POST_EVENT_DAYS = 4            # arrival day plus 3: matches the landing-day calendar scan
 BODY_NIGHT = (23.0, 6.0)       # body clock hours counted as "awake through body night"
 SLEEP_TITLE = "Jet Lag - Sleep \U0001F634"
 AWAKE_TITLE = "Jet Lag - Awake ☀️"
@@ -108,27 +105,13 @@ def main():
     if need < 2:
         mode = "none"
 
-    pre_days = 0 if mode == "none" else int(trip.get("pre_days", 3))
-    if not 0 <= pre_days <= MAX_PRE_DAYS:
-        die(f"pre_days must be 0 to {MAX_PRE_DAYS}")
-    dep_day = dep0.astimezone(zb).date()
-    if pre_days:
-        # Shifting starts at midnight of the first pre-trip day, so night 1 is already ~1 step in.
-        start0 = datetime(dep_day.year, dep_day.month, dep_day.day, tzinfo=zb).astimezone(UTC) \
-            - timedelta(days=pre_days)
-    else:
-        start0 = dep0
-
-    # CBTmin as a UTC clock hour; it moves `sign * rate` h per day from start0.
+    # CBTmin as a UTC clock hour; it moves `sign * rate` h per day from takeoff.
     cbt_body_wall = (wake - CBT_BEFORE_WAKE) % 24
     phi0 = (cbt_body_wall - off_body) % 24
 
     def shifted(t):
-        if mode == "none":
-            return 0.0
-        pre_h = min(MAX_PRE_SHIFT_H, max(0.0, (min(t, dep0) - start0).total_seconds() / 86400) * rate)
-        post_h = max(0.0, (t - dep0).total_seconds() / 86400) * rate
-        return min(need, pre_h + post_h)
+        days = max(0.0, (t - dep0).total_seconds() / 86400)
+        return 0.0 if mode == "none" else min(need, days * rate)
 
     def phi(t):
         return (phi0 + sign * shifted(t)) % 24
@@ -179,11 +162,6 @@ def main():
             t += timedelta(minutes=15)
         out.append((s0, end, cur))
         return out
-
-    def sched(day, hour):
-        """The habitual wall hour on a body-zone date, moved by the shift made so far, as UTC."""
-        base = (datetime(day.year, day.month, day.day, tzinfo=zb) + timedelta(hours=hour)).astimezone(UTC)
-        return base + timedelta(hours=sign * shifted(base)) if mode != "none" else base
 
     def body_night_hours(a, b):
         n, t = 0, a
@@ -270,26 +248,6 @@ def main():
         add_merged(sleep_runs, tz, context)
         return segs
 
-    # Pre-trip nights and days (body zone dates), then the departure day up to takeoff.
-    first = dep_day - timedelta(days=pre_days)
-    pre = []
-    for k in range(pre_days):
-        d = first + timedelta(days=k)
-        wk, bd, nxt = sched(d, wake), sched(d, bed), sched(d + timedelta(days=1), wake)
-        if k == pre_days - 1:
-            nxt = min(nxt, dep0 - timedelta(hours=2.5))  # leave for the airport
-        z = legs[0]["dep_tz"]
-        ctx = f"pre-trip day {k + 1} of {pre_days}"
-        add_event("awake", wk, bd, z, ctx)
-        add_event("sleep", bd, nxt, z, ctx)
-        pre.append({"date": d.isoformat(), "bed_body": clock(bd.astimezone(zb).hour + bd.astimezone(zb).minute / 60),
-                    "wake_next_body": clock(nxt.astimezone(zb).hour + nxt.astimezone(zb).minute / 60),
-                    "shift_at_bed_h": round(shifted(bd), 1),
-                    "caffeine_cutoff": fmt(bd - timedelta(hours=CAFFEINE_GAP), legs[0]["dep_tz"])})
-    if pre_days:
-        wk = sched(dep_day, wake)
-        add_event("awake", wk, dep0, legs[0]["dep_tz"], "departure day")
-
     timeline = []
     prev = None
     for n, leg in enumerate(legs, 1):
@@ -332,11 +290,6 @@ def main():
             "caffeine_cutoff": clock(bed - CAFFEINE_GAP),
             "melatonin_at_bed": melatonin(bed_t),
         })
-        if mode != "none" and i < POST_EVENT_DAYS:
-            ctx = "arrival day" if i == 0 else f"post-landing day {i + 1}"
-            add_event("awake", start, bed_t, dest, ctx)
-            sleep_start = bed_t if i else max(bed_t, arr + timedelta(hours=1.5))
-            add_event("sleep", sleep_start, next_wake, dest, ctx + " night")
         if left < DONE_BELOW:
             break
         day += timedelta(days=1)
@@ -349,14 +302,14 @@ def main():
     landing_body = body_hour(arr)
     warnings = []
     if mode != "none" and not any(e["kind"] == "sleep" and e["context"].startswith("flight") for e in events):
-        warnings.append("No in-flight sleep fits between takeoff+30min, landing-45min and destination night: arrive on pre-trip sleep alone.")
+        warnings.append("No in-flight sleep fits between takeoff+30min, landing-45min and destination night: stay awake and land on the destination day.")
     elif flight_sleep_h < 4 and mode != "none":
         warnings.append(f"Only {flight_sleep_h:.1f}h of in-flight sleep is possible.")
     if landing_body >= BODY_NIGHT[0] or landing_body < BODY_NIGHT[1]:
         warnings.append(f"Body clock reads {clock(landing_body)} at landing: expect to be groggy; plan the arrival day around it.")
 
     print(json.dumps({
-        "shift_h": s, "mode": mode, "need_h": need, "pre_days": pre_days,
+        "shift_h": s, "mode": mode, "need_h": need,
         "rate_h_per_day": rate if mode != "none" else 0,
         "est_days": 0 if mode == "none" else round(need / rate, 1),
         "residual_shift_at_landing_h": round(max(0.0, need - shifted(arr)), 1) if mode != "none" else 0,
@@ -365,7 +318,6 @@ def main():
         "departure_local": fmt(dep0, legs[0]["dep_tz"]),
         "first_flight_body_night_awake_h": first_flight_awake_h,
         "warnings": warnings,
-        "pre": pre,
         "flight_sleep": [{"starts_dest": fmt(a, dest), "starts_local": fmt(a, tz),
                           "caffeine_cutoff_dest": fmt(a - timedelta(hours=CAFFEINE_GAP), dest),
                           "caffeine_cutoff_local": fmt(a - timedelta(hours=CAFFEINE_GAP), tz)}

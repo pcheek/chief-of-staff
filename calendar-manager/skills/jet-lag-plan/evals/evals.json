@@ -3,21 +3,26 @@
   "evals": [
     {
       "id": "single-leg-east",
-      "skills": ["jet-lag-plan"],
+      "skills": [
+        "jet-lag-plan"
+      ],
       "query": "New flight on my calendar: Flight: BOS to LHR (BA 212), departs Mon Nov 2 9:55pm EST, lands Tue Nov 3 9:45am GMT. Make my jet lag plan.",
       "files": [],
       "expected_behavior": [
         "Runs scripts/jetlag_plan.py with body_tz America/New_York and dest_tz Europe/London; does not compute offsets by hand",
         "Reports a 5h advance and the script's residual_shift_at_landing_h, without promising to be fully adjusted at landing",
-        "Creates pre-trip Sleep and Awake blocks, one in-flight Sleep block that starts no earlier than 10:25pm Boston time and ends no later than 9:00am London, an arrival-day Awake block and arrival nights",
+        "Creates blocks only between takeoff and landing: one in-flight Sleep block that starts no earlier than 10:25pm Boston time and ends no later than 9:00am London, plus the Awake blocks around it",
+        "Creates no pre-trip block and no block after landing",
         "Every block is titled exactly 'Jet Lag - Sleep 😴' or 'Jet Lag - Awake ☀️', colorId 8, free, no guests",
         "Each description ends with 'Created by jet-lag-plan: 2026-11-02-BOS-LHR'",
-        "Flags calendar events overlapping the arrival-day low window and writes nothing to move them"
+        "Reports arrival-day calendar flags without moving anything"
       ]
     },
     {
       "id": "layover-long-haul",
-      "skills": ["jet-lag-plan"],
+      "skills": [
+        "jet-lag-plan"
+      ],
       "query": "I fly BOS to Doha Nov 2 10:10pm, land 5:05pm Nov 3, then Doha to Singapore Nov 4 1:30am, land 3:00pm. Plan my sleep.",
       "files": [],
       "expected_behavior": [
@@ -25,24 +30,28 @@
         "Schedules the Doha layover sleep only because the layover is 6 hours or more, starting at least 30 minutes after landing and ending at least 90 minutes before departure",
         "Quotes the script's warning that no in-flight sleep fits destination night",
         "Tells Paul he lands with a residual shift above 1h instead of promising to be fresh",
-        "Pre-trip sleep schedule moves by no more than 3 hours"
+        "Creates no block before takeoff of the first flight or after the final landing"
       ]
     },
     {
       "id": "short-round-trip",
-      "skills": ["jet-lag-plan"],
+      "skills": [
+        "jet-lag-plan"
+      ],
       "query": "I'm in Boston, flying Boston to London Tuesday night and back Thursday, 2 nights there. Jet lag plan?",
       "files": [],
       "expected_behavior": [
         "Counts fewer than 4 nights away and keeps body_tz and dest_tz at America/New_York",
-        "Creates only in-flight 'Jet Lag - Sleep 😴' blocks, with no pre-trip or arrival-day blocks",
+        "Creates only in-flight 'Jet Lag - Sleep 😴' blocks",
         "Does not run the landing-day calendar scan",
         "Never creates a block shorter than 30 minutes or any block in the past"
       ]
     },
     {
       "id": "already-planned",
-      "skills": ["jet-lag-plan"],
+      "skills": [
+        "jet-lag-plan"
+      ],
       "query": "Run jet lag planning for the BOS to SIN trip on Nov 2. The calendar already has Jet Lag blocks ending 'Created by jet-lag-plan: 2026-11-02-BOS-SIN' and no leg has changed.",
       "files": [],
       "expected_behavior": [

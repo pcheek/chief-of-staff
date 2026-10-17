@@ -1,11 +1,12 @@
 ---
 name: jet-lag-plan
-description: Builds Paul Cheek's jet lag plan for an international flight, including layovers, and writes it to his Google Calendar as gray free FYI blocks titled "Jet Lag - Sleep 😴" and "Jet Lag - Awake ☀️", with the light, caffeine, melatonin and meal instructions in each block's description. Shifts his sleep before takeoff so he lands adjusted. Use whenever a new international flight or a time zone change of 2 hours or more appears on his calendar, or when he asks for a jet lag plan, how to beat jet lag, or how to sleep on a flight.
+description: Builds Paul Cheek's jet lag plan for an international flight, including layovers, and writes it to his Google Calendar as gray free FYI blocks titled "Jet Lag - Sleep 😴" and "Jet Lag - Awake ☀️", with the light, caffeine, melatonin and meal instructions in each block's description. Plans only the travel itself: flights and layovers, with no pre-trip schedule shift and nothing after landing. Use whenever a new international flight or a time zone change of 2 hours or more appears on his calendar, or when he asks for a jet lag plan, how to beat jet lag, or how to sleep on a flight.
 ---
 
 # Jet lag plan
 
-Paul must land fresh and adjusted. The circadian math is in `scripts/jetlag_plan.py`. Your job
+Paul must land fresh and adjusted. The plan covers the flights and layovers only: no pre-trip
+schedule shift, and no blocks after landing. The circadian math is in `scripts/jetlag_plan.py`. Your job
 is to find the trip, set the inputs, run the script, and turn its `events[]` into calendar
 blocks with instructions he can follow from his phone in an airport.
 
@@ -21,7 +22,7 @@ Jet lag plan progress:
 - [ ] 2. Skip trips already planned
 - [ ] 3. Set the body clock zone
 - [ ] 4. Run the script
-- [ ] 5. Scan the landing days
+- [ ] 5. Scan the arrival day
 - [ ] 6. Write the calendar blocks
 - [ ] 7. Report
 ```
@@ -66,7 +67,7 @@ inbound flight). Count nights slept in the departure city.
 
 **Short round trip out of Boston, 3 or fewer nights away:** he stays on Boston time. Set
 `dest_tz` to `America/New_York` in step 4. The script then plans in-flight sleep only, against
-Boston night, and writes no pre-trip or arrival blocks. Skip step 5.
+Boston night. Skip step 5.
 
 `wake` and `bed` default to `06:30` and `22:30`, his Boston weekday rhythm, read as the same
 wall clock everywhere. Use his numbers if he gives others.
@@ -79,9 +80,6 @@ Write `trip.json` in the scratchpad (format in the script's docstring), then run
 python3 "${CLAUDE_PLUGIN_ROOT}/skills/jet-lag-plan/scripts/jetlag_plan.py" trip.json
 ```
 
-`pre_days` is the whole days between today and departure, capped at 3. Pre-trip schedule
-moves at most 3 hours before takeoff; the script shifts the rest in transit and after landing.
-
 It exits 2 with a message on bad input: fix the input and rerun. Never hand-compute offsets,
 body times or the shift direction; DST and the 12-hour wrap are where hand math goes wrong.
 
@@ -91,30 +89,29 @@ body times or the shift direction; DST and the 12-hour wrap are where hand math 
 | `residual_shift_at_landing_h`, `body_clock_at_landing` | How adjusted he will be on the ramp, and what his body thinks the time is |
 | `warnings` | Short or impossible in-flight sleep, landing in his body night. Quote them to Paul |
 | `first_flight_body_night_awake_h` | 3 or more means a departure-day nap (step 6) |
-| `pre[]` | Per pre-trip night: target bed and next wake in body time, caffeine cutoff |
-| `events[]` | The blocks to write. `kind`, `zone`, `start`, `end` (local wall time), `context`, `light`, `body_from`/`body_to`, and for sleep: `caffeine_cutoff`, `melatonin`, `sleep_hours` |
-| `days[]` | Per day after landing: `low_window_dest` (circadian low, plus or minus 90 minutes), `low_point_in_waking_hours`, `caffeine_cutoff`, `melatonin_at_bed` |
+| `events[]` | The blocks to write, flights and layovers only. `kind`, `zone`, `start`, `end` (local wall time), `context`, `light`, `body_from`/`body_to`, and for sleep: `caffeine_cutoff`, `melatonin`, `sleep_hours` |
+| `days[0]` | Arrival day, for the report only: `low_window_dest` (circadian low, plus or minus 90 minutes) and `low_point_in_waking_hours` |
 
 Never promise more than the script says. If `residual_shift_at_landing_h` is above 1, tell
 Paul plainly he lands partly shifted, and what the plan does about it.
 
-## 5. Scan the landing days
+## 5. Scan the arrival day
 
-`Google_Calendar:list_events` from arrival through arrival day + 3, inclusive. Flag:
+`Google_Calendar:list_events` for the arrival day and the day after. Flag:
 
-- Any event overlapping that day's `low_window_dest` when `low_point_in_waking_hours` is true.
+- Any event overlapping `days[0].low_window_dest` when `low_point_in_waking_hours` is true.
   Drives and `Commute` events first (recommend a car service), then teaching, keynotes and
   high-stakes calls.
-- Anything before `wake` or after `bed` on the arrival day and the day after.
 - A pickup within 30 minutes of an international landing (immigration and bags).
 - Paul driving himself on arrival day after a leg he stayed awake through.
 
-Flag only. Never move, decline or message anyone about an event. Put the flags in the arrival
-day block's description and in the report.
+Flag only, in the report. Never move, decline or message anyone about an event, and write
+nothing to the calendar for these days.
 
 ## 6. Write the calendar blocks
 
-Create one block per `events[]` entry that has not started. Skip any with `end_utc` in the
+Create one block per `events[]` entry that has not started. Never create a block for any time
+before takeoff or after landing. Skip any with `end_utc` in the
 past (`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/tz.py now`).
 
 Every block, no exceptions:
@@ -147,23 +144,19 @@ Rules for the instruction lines:
 - **Sleep block, in flight:** skip the meal service, mask and earplugs, phone on airplane
   mode. Last caffeine at `caffeine_cutoff`. Wake 45 minutes before landing: water, light,
   coffee with the pre-landing breakfast.
-- **Sleep block, pre-trip night:** bed and wake from `pre[]`. Lights out on time, no screens
-  for the last hour. Caffeine cutoff from `pre[]`.
-- **Sleep block, after landing:** stay in bed if he wakes in the first 3 nights, lights off,
-  no phone. Melatonin only where `melatonin` is `yes`: 0.5 to 3 mg, 30 minutes before
-  lights-out. Prescription-only in Singapore, South Korea, the UK and Australia, and
-  unapproved in Japan: it applies there only if he already carries it.
+- **Sleep block, layover:** hotel or lounge, alarm set 30 minutes before the end. Melatonin
+  only where `melatonin` is `yes`: 0.5 to 3 mg, 30 minutes before lights-out.
+  Prescription-only in Singapore, South Korea, the UK and Australia, and unapproved in
+  Japan: it applies there only if he already carries it.
 - **Awake block, in flight or layover:** an awake stretch through body night means stay up
   and keep the cabin light on; if he crashes, one nap of 45 minutes or less. Eat on destination
   time; on a layover that lands at destination dinner or breakfast, eat.
-- **Awake block, departure day:** when `first_flight_body_night_awake_h` is 3 or more, a 60 to
-  90 minute nap ending at least 6 hours before departure. Naps don't trigger the caffeine rule.
-- **Awake block, arrival day:** no nap, or 20 minutes before 1pm. Name the low window from
-  `days[0]`. Add the step 5 flags. Outside, in daylight, within an hour of landing.
-- **Awake block, later days:** low window from `days[i]`, caffeine cutoff, which end of the day
-  gets light.
-- **Expect:** on the last arrival-day block, "workable tomorrow outside the low window, fully
-  adjusted around <date>", from `est_days`.
+- **First flight's Awake block:** when `first_flight_body_night_awake_h` is 3 or more, say to
+  nap for 60 to 90 minutes on departure day, ending at least 6 hours before takeoff. Naps
+  don't trigger the caffeine rule.
+- **Last Awake block before landing:** light on arrival; name the low window from `days[0]`
+  and the step 5 flags if any; no nap after landing, or 20 minutes before 1pm. Say he lands
+  with `residual_shift_at_landing_h` still to go.
 
 ## 7. Report
 
@@ -172,7 +165,7 @@ One short message, no preamble:
 1. First line: the trip key and any email-versus-calendar discrepancy.
 2. `Shift <need_h>h <later|earlier>. Body on <body zone>. You land with <residual>h left to go.`
 3. Each script warning, verbatim in meaning.
-4. Calendar flags from step 5.
+4. Arrival-day flags from step 5.
 5. Blocks created, with times in Paul's local zone and Boston in parentheses
    (`tz.py show <iso> --local <zone>`).
 
@@ -182,4 +175,4 @@ change (a different flight time is Paul's call; never rebook).
 ## Old patterns
 
 Earlier versions of this plan titled blocks `Jet lag: sleep` and used Sage (`colorId` 2) and
-Tomato (11). Do not reproduce those. All blocks are gray and free.
+Tomato (11). Do not reproduce those. All blocks are gray and free. Versions that wrote pre-trip nights and post-landing days were dropped: Paul wants flights and layovers only.

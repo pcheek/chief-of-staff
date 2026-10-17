@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from zoneinfo import ZoneInfo
 
 SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "skills", "jet-lag-plan",
                       "scripts", "jetlag_plan.py")
@@ -24,10 +25,10 @@ def utc(s):
     return dt.datetime.fromisoformat(s)
 
 
-BOS_LHR = {"dest_tz": LON, "body_tz": NY, "pre_days": 3,
+BOS_LHR = {"dest_tz": LON, "body_tz": NY, 
            "legs": [{"from": "BOS", "to": "LHR", "dep": "2026-11-02T21:55", "dep_tz": NY,
                      "arr": "2026-11-03T09:45", "arr_tz": LON}]}
-BOS_SIN = {"dest_tz": SIN, "body_tz": NY, "pre_days": 3,
+BOS_SIN = {"dest_tz": SIN, "body_tz": NY, 
            "legs": [{"from": "BOS", "to": "DOH", "dep": "2026-11-02T22:10", "dep_tz": NY,
                      "arr": "2026-11-03T17:05", "arr_tz": DOH},
                     {"from": "DOH", "to": "SIN", "dep": "2026-11-04T01:30", "dep_tz": DOH,
@@ -58,10 +59,19 @@ class JetLagTest(unittest.TestCase):
         _, d2 = plan(short)
         self.assertFalse([e for e in d2["events"] if e["kind"] == "sleep" and e["context"].startswith("layover")])
 
-    def test_pre_trip_shift_is_capped_at_three_hours(self):
-        rc, d = plan(dict(BOS_SIN, pre_days=7))
-        self.assertEqual(rc, 0)
-        self.assertTrue(all(p["shift_at_bed_h"] <= 3.0 for p in d["pre"]))
+    def test_events_cover_only_the_flights_and_layovers(self):
+        for trip in (BOS_LHR, BOS_SIN):
+            _, d = plan(trip)
+            first = utc(d["events"][0]["start_utc"])
+            last = utc(d["events"][-1]["end_utc"])
+            legs = trip["legs"]
+            self.assertEqual(first.strftime("%Y-%m-%d %H:%M"),
+                             dt.datetime.fromisoformat(legs[0]["dep"]).replace(tzinfo=ZoneInfo(legs[0]["dep_tz"]))
+                             .astimezone(dt.timezone.utc).strftime("%Y-%m-%d %H:%M"))
+            self.assertEqual(last.strftime("%Y-%m-%d %H:%M"),
+                             dt.datetime.fromisoformat(legs[-1]["arr"]).replace(tzinfo=ZoneInfo(legs[-1]["arr_tz"]))
+                             .astimezone(dt.timezone.utc).strftime("%Y-%m-%d %H:%M"))
+            self.assertTrue(all(e["context"].startswith(("flight", "layover")) for e in d["events"]))
 
     def test_titles_and_minimum_length(self):
         _, d = plan(BOS_LHR)
