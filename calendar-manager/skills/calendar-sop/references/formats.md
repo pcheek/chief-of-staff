@@ -16,6 +16,7 @@ instead.
 | Airport transit | `Drive to <airport>` | `Drive to Logan` |
 | Post-landing buffer | `Buffer: landing delay` | |
 | Airport downtime (DNS: Graphite 8, busy) | `Airport: <airport>` | `Airport: SFO` |
+| Jet lag (Graphite 8, free, solo) | `Jet Lag - Sleep 😴` or `Jet Lag - Awake ☀️`; description ends `Created by jet-lag-plan: <trip key>` | `Jet Lag - Sleep 😴` |
 | Trip | `Travel: <city>` (all-day) | `Travel: London` |
 | Note for Paul | `NOTE: <what needs attention>` | `NOTE: 2 meetings overlap Tue 2pm` |
 | Invite missing from calendar | `NOTE: missing invite: <invite title>` (red, busy) | `NOTE: missing invite: Board prep` |

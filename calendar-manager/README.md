@@ -20,6 +20,7 @@ remember the answer.
    | `conflict-scanner` | Overlaps, tight travel, overscheduling, 6pm dinner, OOO. Writes red `NOTE:` events. |
    | `commute-planner` | 1-hour drive-time blocks (15 minutes off-peak). Moves them and flags childcare. Working location = the venue between the drive in and the drive out. |
    | `travel-planner` | `Travel:` all-day events, exact-time flights, trains and buses, airport transit, landing buffers, Callie invites. Working location = the trip city; in other time zones, out-of-office (never declining) outside 7am to 8pm local. Looks 90 days ahead on weekly runs. |
+   | `travel-planner` → `jet-lag-plan` skill | For every international flight (layovers included), gray free `Jet Lag - Sleep 😴` / `Jet Lag - Awake ☀️` blocks: sleep shifted before takeoff, in-flight sleep (no sleep until 30 min after takeoff, up 45 min before landing), light, caffeine and melatonin notes in each description. |
    | `categorizer` | Color categories, free/busy, title formats, reminders. |
    | `notes-reviewer` | Acts on Paul's notes and holds; closes out its own resolved notes. |
    | `one-on-one-auditor` | 1:1 cadence against the confirmed roster (weekly only). |

@@ -15,10 +15,15 @@ The guard reads only the travel color, from its config (`travel_color_ids`, defa
 | 🧑‍🧑‍🧒‍🧒 Family | 3 | Grape | Dinner with Kyla and Cora, evening routine, date night, family events |
 | 🎤 Speaking / Teaching | 5 | Banana | Classes, keynotes, workshops, sessions Paul delivers, anything that needs prep |
 | ⛔ Do Not Schedule (DNS) | 8 | Graphite | Time that must stay unbooked: airport downtime, standing at an event (book signings), "DNS" blocks. Always busy. Never schedule into it. |
+| 😴☀️ Jet Lag (FYI) | 8 | Graphite | `Jet Lag - Sleep 😴` and `Jet Lag - Awake ☀️` blocks from the jet-lag-plan skill. Gray like DNS, but **free**, solo, no reminders. Not Do Not Schedule: meetings may overlap them. |
 | 🚨 Needs Review | 11 | Tomato | `NOTE:` and `HOLD:` events, items Paul must review or act on, out-of-office where meetings should be declined |
 | 📅 Meetings, 👀 Awareness | none | calendar default | Every meeting (1:1s, recurring syncs, calls, anything with guests), plus FYI and awareness items. **Never set a colorId on these.** |
 
 ## Rules
+
+- **Jet Lag blocks are the one Graphite exception.** A solo Graphite event titled `Jet Lag - Sleep 😴`
+  or `Jet Lag - Awake ☀️` stays **free** and is not a DNS block. Never set it busy, retitle it, or
+  treat an overlap with it as a conflict. They are gray so Paul can see them, nothing more.
 
 - **Meetings get no color.** Never color a meeting. If a meeting already carries a color,
   leave it and propose the change to Paul. The connector can't reliably clear a color.

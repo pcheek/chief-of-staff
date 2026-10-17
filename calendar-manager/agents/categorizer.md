@@ -18,22 +18,24 @@ Only events that haven't started yet. Never touch the past; the guard blocks it 
    - Never assign 4, 6, 7, 9 or 10.
    - Don't recolor Callie's invites (organizer calliemcheek@gmail.com).
    - Don't recolor events Paul put in a color outside the map. Ask once per kind.
-2. **Free/busy.** Commitments, travel, commutes, deep work and DNS blocks are busy. Holds,
+2. **Jet Lag blocks** (title starts `Jet Lag - `, Graphite 8, from the jet-lag-plan skill): leave them
+   alone. They are free by design, not DNS. Never mark them busy or retitle them.
+3. **Free/busy.** Commitments, travel, commutes, deep work and DNS blocks are busy. Holds,
    `NOTE:` events, WFH and all-day `Travel:` markers are free.
-3. **Solo events only** (`get_event` first, and confirm no guests):
+4. **Solo events only** (`get_event` first, and confirm no guests):
    - Normalize the title to `references/formats.md`.
    - Set reminders: 5 minutes for commutes and Zoom, 10 for lunch, none for deep work.
-4. **Events with guests:**
+5. **Events with guests:**
    - A Google Meet link where Paul's Zoom should be.
    - A missing Zoom on a virtual meeting.
    - A student meeting longer than 20 minutes.
    - A meeting with someone in another zone and no time zone line in the description.
 
    Each goes to `proposed_for_paul`. You can't edit those.
-5. **Solo events with a naive or wrong offset** (wrong for the place it happens): fix it
+6. **Solo events with a naive or wrong offset** (wrong for the place it happens): fix it
    with `tz.py`, after `get_event`.
 
-6. **In-person events with no location.** Look the venue up (the event's description, the
+7. **In-person events with no location.** Look the venue up (the event's description, the
    invite and its Gmail thread, Drive docs) and use only an address a source gives.
    - Solo event (`get_event` shows no guests): set its location to the address with a
      Google Maps link, and add the source, parking and host contact to the description.

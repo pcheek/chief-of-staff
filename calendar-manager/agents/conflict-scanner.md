@@ -25,7 +25,7 @@ enough for him to fix.
    nearly free. Propose a
    family block (Grape, 3) through the evening if nothing is booked.
 5. **DNS blocks** (Graphite, 8): anything booked over one is a conflict. Never propose a
-   slot inside one.
+   slot inside one. Gray `Jet Lag - ` blocks are free FYI, not DNS: ignore them here.
 6. **Wrong-hour meetings.** On days the location timeline puts Paul away from Boston, flag
    any meeting that starts before 7am or ends after 9pm in his local zone. A 4pm Boston call
    is 5am in Tokyo.
