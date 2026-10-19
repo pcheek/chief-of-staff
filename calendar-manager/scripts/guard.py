@@ -53,13 +53,14 @@ SCRIPT_DIR = os.path.realpath(os.path.dirname(os.path.abspath(__file__)))
 PLUGIN_ROOT = os.path.dirname(SCRIPT_DIR)
 
 # Set per hook call by init_paths(), from the event's cwd.
-HOME = STATE = GUARDED_DIR = SOLO_DIR = CREATED = CONFIG = HOME_CONFIG = ""
+ROOT = HOME = STATE = GUARDED_DIR = SOLO_DIR = CREATED = CONFIG = HOME_CONFIG = ""
 
 
 def init_paths(cwd=None):
-    global HOME, STATE, GUARDED_DIR, SOLO_DIR, CREATED, CONFIG, HOME_CONFIG
+    global ROOT, HOME, STATE, GUARDED_DIR, SOLO_DIR, CREATED, CONFIG, HOME_CONFIG
     p = cm_paths.paths(cwd)
-    HOME, STATE, CONFIG, HOME_CONFIG = p["home"], p["state"], p["config"], p["home_config"]
+    ROOT, HOME, STATE, CONFIG, HOME_CONFIG = (p["root"], p["home"], p["state"], p["config"],
+                                              p["home_config"])
     GUARDED_DIR = os.path.join(STATE, "guarded")
     SOLO_DIR = os.path.join(STATE, "solo_seen")
     CREATED = os.path.join(STATE, "created_events.json")
@@ -538,9 +539,9 @@ def protected():
     """(hidden, code): hidden paths may not be mentioned at all; code paths may not be
     written. Both are real, resolved paths."""
     hidden = {os.path.realpath(STATE), os.path.realpath(CONFIG), os.path.realpath(HOME_CONFIG)}
-    code = {os.path.join(HOME, ".claude"), os.path.join(HOME, ".gitignore"),
-            os.path.join(HOME, ".gitattributes"), os.path.join(HOME, cm_paths.MARKER),
-            SCRIPT_DIR, os.path.join(PLUGIN_ROOT, "hooks")}
+    code = {os.path.join(ROOT, ".claude"), os.path.join(ROOT, ".gitignore"),
+            os.path.join(ROOT, ".gitattributes"), SCRIPT_DIR, os.path.join(PLUGIN_ROOT, "hooks")}
+    code |= {os.path.join(ROOT, m) for m in cm_paths.MARKERS}
     return hidden, {os.path.realpath(c) for c in code}
 
 

@@ -52,7 +52,8 @@ import cm_paths  # noqa: E402
 
 SCRIPT = os.path.realpath(os.path.abspath(__file__))
 _P = cm_paths.paths()
-HOME, STATE, CONFIG = _P["home"], _P["state"], _P["config"]
+ROOT, HOME, STATE, CONFIG = _P["root"], _P["home"], _P["state"], _P["config"]
+REL = os.path.relpath(HOME, ROOT)  # "." in the legacy layout, "calendar" in memory-manager
 DATA = os.path.join(HOME, "guidance.json")
 SYNCED = ["guidance.json", "guidance.md", "questions.md", "runs"]
 NETWORK_ERRORS = re.compile(r"could not resolve|connection|timed out|unable to access|"
@@ -241,7 +242,7 @@ def is_repo():
                              capture_output=True)
     except OSError:
         return False
-    return top.returncode == 0 and os.path.realpath(top.stdout.strip()) == HOME
+    return top.returncode == 0 and os.path.realpath(top.stdout.strip()) == ROOT
 
 
 def ignored(rel):
@@ -482,7 +483,7 @@ def cmd_merge_driver(args, data):
 # ---------------------------------------------------------------- git sync
 
 def git(*args, check=False):
-    return subprocess.run(["git", *args], cwd=HOME, text=True, capture_output=True)
+    return subprocess.run(["git", *args], cwd=ROOT, text=True, capture_output=True)
 
 
 def with_network_retry(fn):
@@ -504,9 +505,14 @@ def branch():
     return os.environ.get("CALENDAR_MANAGER_MEMORY_BRANCH") or "main"
 
 
-ATTRIBUTES = ("guidance.json merge=calendar-guidance\n"
-              "guidance.md merge=calendar-render\n"
-              "questions.md merge=calendar-render\n")
+def _attr(name):
+    return name if REL == "." else REL + "/" + name
+
+
+ATTRIBUTES = ("%s merge=calendar-guidance\n"
+              "%s merge=calendar-render\n"
+              "%s merge=calendar-render\n") % (_attr("guidance.json"), _attr("guidance.md"),
+                                               _attr("questions.md"))
 
 
 def configure_git():
@@ -514,7 +520,7 @@ def configure_git():
     .git/info/attributes, so a fresh cloud clone merges correctly even if the repo's
     own .gitattributes is missing or edited."""
     gitdir = git("rev-parse", "--git-dir").stdout.strip()
-    info = os.path.join(HOME, gitdir, "info")
+    info = os.path.join(ROOT, gitdir, "info")
     os.makedirs(info, exist_ok=True)
     attrs = os.path.join(info, "attributes")
     try:
@@ -543,7 +549,7 @@ def remote_has_branch(br):
 
 def rebase_in_progress():
     gitdir = git("rev-parse", "--git-dir").stdout.strip()
-    return any(os.path.exists(os.path.join(HOME, gitdir, d))
+    return any(os.path.exists(os.path.join(ROOT, gitdir, d))
                for d in ("rebase-merge", "rebase-apply"))
 
 
@@ -567,7 +573,7 @@ def pull():
 
 
 def commit_synced(message):
-    paths = [p for p in SYNCED if os.path.exists(os.path.join(HOME, p))]
+    paths = [_attr(p) for p in SYNCED if os.path.exists(os.path.join(HOME, p))]
     if paths:
         git("add", "--", *paths)
     if git("diff", "--cached", "--quiet").returncode != 0:

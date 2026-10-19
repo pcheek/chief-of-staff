@@ -150,8 +150,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("memory", help="path to a clone of pcheek/calendar-manager-memory")
     args = ap.parse_args()
-    if not os.path.isfile(os.path.join(args.memory, ".calendar-manager-memory")):
-        sys.exit("%s has no .calendar-manager-memory marker; is it the memory repo?"
+    if not any(os.path.isfile(os.path.join(args.memory, m))
+               for m in (".memory-manager", ".calendar-manager-memory")):
+        sys.exit("%s has no .memory-manager or .calendar-manager-memory marker; is it the memory repo?"
                  % args.memory)
     stamp = vendor(args.memory)
     print("vendored calendar-manager %s from %s" % (stamp["version"], stamp["source"]))

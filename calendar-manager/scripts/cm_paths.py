@@ -18,6 +18,12 @@ import json
 import os
 
 MARKER = ".calendar-manager-memory"
+# memory-manager layout: one private repo with calendar/ and email/ folders. Its marker sits at the
+# repo root; calendar data lives in <root>/calendar. The legacy marker means the old layout, where the
+# repo root is the data folder.
+SHARED_MARKER = ".memory-manager"
+CALENDAR_DIR = "calendar"
+MARKERS = (SHARED_MARKER, MARKER)
 DESKTOP_HOME = "~/.claude/calendar-manager"
 
 
@@ -32,7 +38,7 @@ def find_marker(start):
     if os.path.isfile(d):
         d = os.path.dirname(d)
     while True:
-        if os.path.isfile(os.path.join(d, MARKER)):
+        if any(os.path.isfile(os.path.join(d, m)) for m in MARKERS):
             return d
         parent = os.path.dirname(d)
         if parent == d:
@@ -40,10 +46,24 @@ def find_marker(start):
         d = parent
 
 
-def resolve_home(cwd=None):
+def data_home(root):
+    """Where calendar data lives under a repo root: <root>/calendar in the memory-manager layout,
+    the root itself in the legacy layout."""
+    if os.path.isfile(os.path.join(root, SHARED_MARKER)):
+        return os.path.join(root, CALENDAR_DIR)
+    return root
+
+
+def resolve_root(cwd=None):
+    """The repo root (the folder with a marker), or the data folder itself on the desktop."""
     env = os.environ.get("CALENDAR_MANAGER_HOME")
     if env and os.path.isdir(_real(env)):
-        return _real(env)
+        root = _real(env)
+        # The variable may name the calendar folder inside a memory-manager clone.
+        if os.path.basename(root) == CALENDAR_DIR and os.path.isfile(
+                os.path.join(os.path.dirname(root), SHARED_MARKER)):
+            return os.path.dirname(root)
+        return root
     # The variable may name the wrong clone path; the marker never does.
     for start in (cwd, os.environ.get("CLAUDE_PROJECT_DIR"), os.getcwd()):
         found = find_marker(start)
@@ -52,10 +72,16 @@ def resolve_home(cwd=None):
     return _real(env or DESKTOP_HOME)
 
 
+def resolve_home(cwd=None):
+    return data_home(resolve_root(cwd))
+
+
 def paths(cwd=None):
-    home = resolve_home(cwd)
+    root = resolve_root(cwd)
+    home = data_home(root)
     config = os.environ.get("CALENDAR_MANAGER_CONFIG")
     return {
+        "root": root,
         "home": home,
         "state": os.path.join(home, "state"),
         "config": _real(config) if config else os.path.join(home, "config.json"),
