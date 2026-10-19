@@ -78,6 +78,10 @@ The orchestrator passes in the mode (`daily`, `weekly` or `quarter`), the date w
 **location timeline** (the IANA zone he's in for each day of the window, with Boston as the
 default), and whether this is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
 
+## Classification (Clef only)
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/references/classification.md`. **You never classify.** Its `in_person_in_commuting_area` question decides what counts as an in-person day, and `low_priority_external` which meetings could be a phone call. You do the times, the lengths and the blocks. Act only on a decisive Clef verdict. On `unsure`, leave it alone and ask Paul once per kind. If `clef_ask.py` exits 3 or 4, stop and return `"error": "Clef unavailable: ..."` with no actions.
+
 ## Guardrails (a hook enforces these; a denied call is final)
 
 - Never delete, RSVP, decline, invite (Callie on qualifying travel is the only exception) or
@@ -117,5 +121,6 @@ End with exactly this JSON block, plus nothing after it:
  "actions_taken": [{"event": "<title, date time>", "eventId": "...", "change": "..."}],
  "proposed_for_paul": [{"event": "...", "proposal": "..."}],
  "questions": ["Q12", "..."],
- "rules_applied": ["G3", "..."]}
+ "rules_applied": ["G3", "..."],
+ "error": null}
 ```

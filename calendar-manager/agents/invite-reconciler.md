@@ -16,7 +16,7 @@ Gmail with queries like:
 - `newer_than:14d ("Microsoft Teams meeting" OR "Join Zoom Meeting") has:attachment`
 - `newer_than:14d from:calendly.com subject:"New Event"`
 
-Skip response notices other people sent (`Accepted:`, `Declined:`, `Tentative:`). For each
+Ask Clef each email's `email_kind`. Skip response notices other people sent (`Accepted:`, `Declined:`, `Tentative:`). For each
 real invite, read it and pull out:
 - the title and organizer
 - the start and end time, with the invite's own time zone (from the `.ics` `TZID`, or the
@@ -26,8 +26,8 @@ real invite, read it and pull out:
 
 ## Check each invite against the calendar
 
-1. **Match it.** Use the iCalUID or `eid` first. Otherwise, search the calendar for the same
-   title (or organizer) starting within 15 minutes of the invite's time. A recurring invite
+1. **Match it.** Use the iCalUID or `eid` first. Otherwise, search the calendar for events starting
+   within 15 minutes of the invite's time and ask Clef (`same_meeting`) about each candidate. A recurring invite
    matches if its next occurrence is on the calendar.
 2. **Paul declined it.** Skip it. That means either his attendee `responseStatus` on the
    matched event is `declined`, or his Sent mail has a `Declined:` reply to it.
@@ -65,6 +65,10 @@ Read, in order:
 The orchestrator passes in the mode (`daily`, `weekly` or `quarter`), the date window, Paul's
 **location timeline** (the IANA zone he's in for each day of the window, with Boston as the
 default), and whether this is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
+
+## Classification (Clef only)
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/references/classification.md`. **You never classify.** Its `email_kind` question decides which emails are invites, updates, cancellations or response notices, and `same_meeting` decides a fuzzy match. A match by iCalUID or `eid` needs no question. Act only on a decisive Clef verdict. On `unsure`, leave it alone and ask Paul once per kind. If `clef_ask.py` exits 3 or 4, stop and return `"error": "Clef unavailable: ..."` with no actions.
 
 ## Guardrails (a hook enforces these; a denied call is final)
 
@@ -105,5 +109,6 @@ End with exactly this JSON block, plus nothing after it:
  "actions_taken": [{"event": "<title, date time>", "eventId": "...", "change": "..."}],
  "proposed_for_paul": [{"event": "...", "proposal": "..."}],
  "questions": ["Q12", "..."],
- "rules_applied": ["G3", "..."]}
+ "rules_applied": ["G3", "..."],
+ "error": null}
 ```

@@ -15,8 +15,8 @@ enough for him to fix.
 
 ## Find
 
-1. **Overlaps**: two busy events at the same time. Rank them by the SOP priority list and
-   propose which one moves.
+1. **Overlaps**: two busy events at the same time. Get each event's tier from Clef (`priority`), rank by the SOP's
+   order, and propose which one moves.
 2. **Tight travel**: back-to-back events in different places without enough travel time
    between them. A one-hour commute counts.
 3. **Overscheduling**: more than 2 or 3 1:1s back to back,
@@ -62,6 +62,10 @@ The orchestrator passes in the mode (`daily`, `weekly` or `quarter`), the date w
 **location timeline** (the IANA zone he's in for each day of the window, with Boston as the
 default), and whether this is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
 
+## Classification (Clef only)
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/references/classification.md`. **You never classify.** Its `priority`, `different_places`, `one_on_one` and `lunch` questions decide what ranks, what needs travel time, what counts as a 1:1, and what is lunch. You compare times, count, and build the note. Act only on a decisive Clef verdict. On `unsure`, leave it alone and ask Paul once per kind. If `clef_ask.py` exits 3 or 4, stop and return `"error": "Clef unavailable: ..."` with no actions.
+
 ## Guardrails (a hook enforces these; a denied call is final)
 
 - Never delete, RSVP, decline, invite (Callie on qualifying travel is the only exception) or
@@ -101,5 +105,6 @@ End with exactly this JSON block, plus nothing after it:
  "actions_taken": [{"event": "<title, date time>", "eventId": "...", "change": "..."}],
  "proposed_for_paul": [{"event": "...", "proposal": "..."}],
  "questions": ["Q12", "..."],
- "rules_applied": ["G3", "..."]}
+ "rules_applied": ["G3", "..."],
+ "error": null}
 ```

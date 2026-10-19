@@ -4,6 +4,27 @@ Paul's calendar SOP, run by agents on a schedule. They keep the calendar organiz
 detailed and accurate, catch overscheduling before it happens, ask when they're unsure, and
 remember the answer.
 
+## Clef setup (classification)
+
+No Claude model classifies anything here. Every category, yes/no, and ranking judgment goes to
+Cloudflare's Clef decision model through `scripts/clef_ask.py`; the agents retrieve, extract,
+do arithmetic, and write (`skills/calendar-sop/references/classification.md`). If Clef is
+unreachable, the run stops before it touches the calendar and says why.
+
+Do this once, in Claude Code on the web (claude.ai/code), on the `calendar-manager` cloud
+environment (environment menu in a session's title bar, then Edit):
+
+1. Create a Cloudflare API token: custom token, `Account > Workers AI > Read` and
+   `Account > Workers AI > Edit` on the one account, with an expiry.
+2. **Network secrets > Add secret**: type Bearer, allowed website `api.cloudflare.com`, header
+   `Authorization` with prefix `Bearer`, value = the token. The agent proxy attaches it outside
+   the session, so no agent ever sees it.
+3. Add the environment variable `CLOUDFLARE_ACCOUNT_ID=<your account id>`.
+4. Check it from a session on that environment:
+   `python3 calendar-manager/scripts/clef_ask.py --probe` prints `{"ok": true, ...}`.
+
+Never paste a token into a chat, a prompt, a routine, or the memory repo.
+
 ## How a run works
 
 1. Two **cloud routines** on claude.ai/code fire the run whether or not Paul's Mac is on:
