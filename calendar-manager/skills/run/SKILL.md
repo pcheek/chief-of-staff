@@ -58,6 +58,15 @@ cadence check). Its report can be long: lead with counts per agent.
      connector is available, stop and say so.
    - Paul's Gmail connector (`mcp__Gmail__*`) is required for invites and offered times.
      Never use the org Gmail connector, which is Riley's mailbox.
+   - **Clef is required.** No Claude model classifies in this plugin
+     (`skills/calendar-sop/references/classification.md`). Run
+     `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/clef_ask.py" --probe`. If it exits 3 (no
+     `CLOUDFLARE_ACCOUNT_ID` on this environment) or 4 (Clef unreachable, or the
+     `api.cloudflare.com` network secret is missing), **stop**: dispatch no agent, change no
+     calendar item, write the report with the error and the fix (README, "Clef setup"), push
+     it, and tell Paul. Never classify with Claude instead. A mid-run Clef failure inside an
+     agent comes back as that agent's `error`; list it in the report and don't retry it by
+     hand.
 2. **Load context.** Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/SKILL.md`, then
    `guidance.md` and `questions.md` in the memory folder.
 3. **Build the location timeline** for the travel window, the longer of the two

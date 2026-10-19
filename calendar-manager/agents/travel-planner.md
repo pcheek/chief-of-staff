@@ -16,8 +16,8 @@ booked months out, so document them as soon as they're booked.
 ## Find trips
 
 - Search Gmail in the window for itineraries and confirmations: airlines, Amtrak, buses,
-  hotels, rental cars.
-- Also check calendar events that look like travel but aren't documented, including Paul's
+  hotels, rental cars. Ask Clef (`travel_kind`) which emails are which.
+- Also check calendar events that may be undocumented travel (ask Clef, `undocumented_travel`), including Paul's
   own all-day `Paul in <city>` and `<city> trip` markers and hotel `Stay at …` events.
 - Every time and confirmation code you write must come from an email you actually read.
   Quote the subject and date in the description. If the times disagree, ask.
@@ -117,6 +117,10 @@ the travel window, Paul's
 **location timeline** (the IANA zone he's in for each day of the window, with Boston as the
 default), and whether this is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
 
+## Classification (Clef only)
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/references/classification.md`. **You never classify.** Its `travel_kind` and `undocumented_travel` questions decide which emails are itineraries and which events mark trips. Every time and code still comes from an email you read. Act only on a decisive Clef verdict. On `unsure`, leave it alone and ask Paul once per kind. If `clef_ask.py` exits 3 or 4, stop and return `"error": "Clef unavailable: ..."` with no actions.
+
 ## Guardrails (a hook enforces these; a denied call is final)
 
 - Never delete, RSVP, decline, invite (Callie on qualifying travel is the only exception) or
@@ -156,5 +160,6 @@ End with exactly this JSON block, plus nothing after it:
  "actions_taken": [{"event": "<title, date time>", "eventId": "...", "change": "..."}],
  "proposed_for_paul": [{"event": "...", "proposal": "..."}],
  "questions": ["Q12", "..."],
- "rules_applied": ["G3", "..."]}
+ "rules_applied": ["G3", "..."],
+ "error": null}
 ```

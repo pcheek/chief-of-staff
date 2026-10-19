@@ -39,6 +39,8 @@ Skip booking-link emails (Calendly, Google booking pages). Those times are alrea
 
 ## Decide per thread
 
+Ask Clef for each thread's `status` and each email's `email_kind`; the cases below follow its verdict.
+
 1. **Confirmed.** A later message settles on a time.
    - The confirmed time must be on the calendar, either as the real event or as an invite.
    - If it isn't, create `NOTE: confirmed, not on calendar: <name> <topic>`: red, busy, at
@@ -75,6 +77,10 @@ Read, in order:
 The orchestrator passes in the mode (`daily`, `weekly` or `quarter`), the date window, Paul's
 **location timeline** (the IANA zone he's in for each day of the window, with Boston as the
 default), and whether this is a `dry-run`. In a dry run, call no create or update tool. Report what you would do.
+
+## Classification (Clef only)
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/calendar-sop/references/classification.md`. **You never classify.** Its `email_kind` and `status` questions decide which emails offer times and where a thread stands. Extracting the slots, their zones and durations is reading, which stays with you, along with the 7-day cold rule (arithmetic). Act only on a decisive Clef verdict. On `unsure`, leave it alone and ask Paul once per kind. If `clef_ask.py` exits 3 or 4, stop and return `"error": "Clef unavailable: ..."` with no actions.
 
 ## Guardrails (a hook enforces these; a denied call is final)
 
@@ -115,5 +121,6 @@ End with exactly this JSON block, plus nothing after it:
  "actions_taken": [{"event": "<title, date time>", "eventId": "...", "change": "..."}],
  "proposed_for_paul": [{"event": "...", "proposal": "..."}],
  "questions": ["Q12", "..."],
- "rules_applied": ["G3", "..."]}
+ "rules_applied": ["G3", "..."],
+ "error": null}
 ```

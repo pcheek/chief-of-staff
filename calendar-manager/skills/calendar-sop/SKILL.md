@@ -13,7 +13,7 @@ to help him stop.
 
 1. This file.
 2. `references/timezones.md`, `references/colors.md`, `references/formats.md`,
-   `references/one-on-ones.md`.
+   `references/one-on-ones.md`, `references/classification.md`.
 3. `references/learned.md`: rules Paul has confirmed, promoted into the plugin.
 4. `guidance.md` in the memory folder (`guidance.py where` prints it; in the cloud it's the
    private `pcheek/calendar-manager-memory` repo): Paul's newest answers, not yet promoted.
@@ -50,6 +50,9 @@ the guardrails.
   saw no other attendees on. Always read before editing.
 - If the hook denies a call, don't retry it and don't find another way. Log a question and
   move on.
+
+- **Never classify with a Claude model.** Every category, yes/no, and ranking judgment comes
+  from Clef (`references/classification.md`). On an `unsure` verdict, or if Clef is down, don't act.
 
 ## When unsure, ask instead of acting
 
